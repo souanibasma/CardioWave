@@ -1,0 +1,42 @@
+name: ecg_ai_env
+
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+
+  # Core
+  - pip
+  - numpy=1.26.4
+  - scipy
+  - pandas
+
+  # ML / AI
+  - pytorch
+  - torchvision
+  - torchaudio
+
+  # API
+  - fastapi
+  - uvicorn
+  - flask
+  - flask-cors
+
+  # Utils
+  - matplotlib
+  - pillow
+
+  # Pip-only packages
+  - pip:
+      - opencv-python
+      - pydantic
+      - python-multipart
+      - requests
+      - timm
+      - einops
+      - connected-components-3d
+      - huggingface_hub
+      - neurokit2
