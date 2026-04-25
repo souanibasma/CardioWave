@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import User from "../models/User";
 import ECG from "../models/ECG";
+import ECGAnalysis from "../models/ECGAnalysis"; // ← ajouter cette ligne
 
 interface AuthRequest extends Request {
   user?: any;

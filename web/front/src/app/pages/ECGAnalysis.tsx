@@ -26,6 +26,8 @@ import {
     saveDoctorNotes,
     getImageUrl,
 } from '../../services/api';
+import ChatPanel from '../components/ChatPanel';
+import ExportPDFButton from '../components/ExportPDFButton';
 
 interface ECGAnalysisData {
     _id: string;
@@ -622,6 +624,7 @@ export default function ECGAnalysis() {
     };
 
     return (
+        <>
         <DashboardLayout>
             <div style={styles.page}>
 
@@ -643,7 +646,13 @@ export default function ECGAnalysis() {
                             )}
                         </p>
                     </div>
-                    <StatusBadge />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <StatusBadge />
+                        <ExportPDFButton
+                            analysisId={id as string}
+                            disabled={!isAnalyzed}
+                        />
+                    </div>
                 </div>
 
                 {/* ── SECTION 1: ANALYSE IA (Priorité visuelle) ── */}
@@ -1195,5 +1204,16 @@ export default function ECGAnalysis() {
                 </div>
             </div>
         </DashboardLayout>
+
+        <ChatPanel
+            analysisId={id as string}
+            anomalies={
+                metrics?.ai_classification?.anomalies ??
+                (metrics?.ai_classification?.n1?.positives
+                    ? Object.values(metrics.ai_classification.n1.positives).flat() as string[]
+                    : [])
+            }
+        />
+        </>
     );
 }
