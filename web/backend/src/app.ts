@@ -13,6 +13,7 @@ import notificationRoutes from "./routes/notificationRoutes";
 import doctorDashboardRoutes from "./routes/doctorDashboardRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import ecgAnalysisRoutes from "./routes/ecgAnalysisRoutes";
+import chatRoutes from "./routes/chatRoutes";
 
 const app = express();
 
@@ -53,4 +54,11 @@ app.use("/api/articles", publicArticleRoutes);
 
 import chatbotRoutes from "./routes/chatbotRoutes";
 app.use("/api/chatbot", chatbotRoutes);
+
+app.use("/api/chat", chatRoutes);
+
+import reportRoutes from "./routes/reportRoutes";
+app.use("/uploads/reports", express.static(path.join(__dirname, "reports")));
+app.use("/api/report", reportRoutes);
+
 export default app;

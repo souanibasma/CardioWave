@@ -421,6 +421,11 @@ export async function saveDoctorNotes(id: string, notes: string) {
   return data;
 }
 
+export async function generateReport(id: string, chatSummary?: string) {
+  const { data } = await API.post(`/report/${id}`, { chatSummary });
+  return data;
+}
+
 /**
  * Resolves image URLs based on source:
  * - http://... -> return as is
