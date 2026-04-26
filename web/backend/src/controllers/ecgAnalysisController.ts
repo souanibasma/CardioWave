@@ -52,13 +52,14 @@ export const uploadECG = async (req: Request, res: Response) => {
     const ecg = await ECG.create({
       title,
       originalImage: `uploads/ecgs/${file.filename}`,
-      patient: finalPatientId,
+      patient: finalPatientId as any,
+      doctor: (req as any).user?._id, // ✅ Assigne le médecin pour qu'il "possède" l'ECG
       uploadedBy: (req as any).user?._id,
     });
 
     // 3. Créer l'Analyse automatiquement
     const analysis = await ECGAnalysis.create({
-      ecg: ecg._id,
+      ecg: (ecg as any)._id, // ✅ Assertion pour accéder à _id
       status: "uploaded",
     });
 
@@ -100,21 +101,45 @@ export const createAnalysisFromECG = async (req: Request, res: Response) => {
 export const getECGAnalysisDetails = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const analysis = await ECGAnalysis.findById(id)
-      .populate({
-        path: 'ecg',
-        populate: { path: 'patient', select: 'fullName' }
-      });
+    
+    // 1. Tenter de trouver l'analyse directement
+    let analysis = await ECGAnalysis.findById(id).populate({
+      path: 'ecg',
+      populate: { path: 'patient', select: 'fullName' }
+    });
+
+    // 2. Si non trouvé, c'est peut-être un ID d'ECG (cas des ECG reçus sans analyse)
+    if (!analysis) {
+      const ecg = await require("../models/ECG").default.findById(id);
+      if (ecg) {
+        // Vérifier si une analyse existe déjà pour cet ECG
+        analysis = await ECGAnalysis.findOne({ ecg: ecg._id });
+        
+        if (!analysis) {
+          // Créer l'analyse uniquement si elle n'existe pas
+          analysis = await ECGAnalysis.create({
+            ecg: ecg._id,
+            status: 'uploaded'
+          });
+        }
+
+        // Re-fetch avec population
+        analysis = await ECGAnalysis.findById(analysis._id).populate({
+          path: 'ecg',
+          populate: { path: 'patient', select: 'fullName' }
+        });
+      }
+    }
 
     if (!analysis) {
-       res.status(404).json({ message: "Analyse introuvable" });
-       return;
+      res.status(404).json({ message: "Analyse ou ECG introuvable" });
+      return;
     }
 
     res.status(200).json(analysis);
-  } catch (error: any) {
+  } catch (error) {
     console.error("getECGAnalysisDetails error:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Erreur serveur" });
   }
 };
 
@@ -122,18 +147,46 @@ export const getECGAnalysisDetails = async (req: Request, res: Response) => {
 export const digitizeECGAnalysis = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const analysis = await ECGAnalysis.findById(id).populate('ecg');
+    
+    // 1. Tenter de trouver l'analyse par son ID ou par l'ID de l'ECG associé
+    let analysis = await ECGAnalysis.findById(id).populate('ecg');
+    
+    if (!analysis) {
+      analysis = await ECGAnalysis.findOne({ ecg: id }).populate('ecg');
+    }
+
     if (!analysis || !analysis.ecg) {
-       res.status(404).json({ message: "Analyse ou ECG introuvable" });
-       return;
+      res.status(404).json({ message: "Analyse ou ECG introuvable" });
+      return;
     }
 
     const ecg = analysis.ecg as any;
-    // Assuming originalImage is a relative path in backend/src/uploads/
-    const imagePath = path.resolve(__dirname, "../", ecg.originalImage);
-    
-    if (!fs.existsSync(imagePath)) {
-      res.status(400).json({ message: "Fichier image original introuvable sur le serveur: " + imagePath });
+    const fileName = path.basename(ecg.originalImage); // Récupérer juste "ecg-123.png"
+
+    // Liste des dossiers où chercher le fichier par ordre de priorité
+    const searchDirs = [
+      path.join(__dirname, "../uploads/ecgs"),   // web/backend/src/uploads/ecgs
+      path.join(__dirname, "../../uploads"),      // web/backend/uploads (Root)
+      path.join(__dirname, "../uploads"),        // web/backend/src/uploads
+      path.join(__dirname, "../../uploads/ecgs")  // web/backend/uploads/ecgs
+    ];
+
+    let imagePath = "";
+    for (const dir of searchDirs) {
+      const fullPath = path.join(dir, fileName);
+      if (fs.existsSync(fullPath)) {
+        imagePath = fullPath;
+        break;
+      }
+    }
+
+    console.log(`[Digitize] File found at: ${imagePath || "NOT FOUND"}`);
+
+    if (!imagePath) {
+      res.status(404).json({ 
+        message: `Fichier image original introuvable : ${fileName}`,
+        details: "Le fichier n'est présent dans aucun des dossiers d'uploads configurés."
+      });
       return;
     }
 
