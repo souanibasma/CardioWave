@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -469,6 +469,7 @@ function MetricCard({
 /* ── Main component ── */
 export default function ECGAnalysis() {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
 
     const [analysis, setAnalysis] = useState<ECGAnalysisData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -524,12 +525,12 @@ export default function ECGAnalysis() {
 
     /* ─────── Digitize ─────── */
     const handleDigitize = async () => {
-        if (!id || !analysis) return;
+        if (!analysis || !analysis._id) return;
         try {
             setDigitizing(true);
             setDigitizeError(null);
-            console.log('[ECGAnalysis] Calling digitize for', id);
-            const res = await digitizeECGAnalysis(id);
+            console.log('[ECGAnalysis] Calling digitize for', analysis._id);
+            const res = await digitizeECGAnalysis(analysis._id);
             console.log('[ECGAnalysis] Digitize result:', res);
             await fetchAnalysis();
         } catch (err: any) {
@@ -542,12 +543,12 @@ export default function ECGAnalysis() {
 
     /* ─────── Analyze (AI) ─────── */
     const handleAnalyze = async () => {
-        if (!id || !analysis) return;
+        if (!analysis || !analysis._id) return;
         try {
             setAnalyzing(true);
             setAnalyzeError(null);
-            console.log('[ECGAnalysis] Calling AI analyze for', id);
-            const res = await analyzeECGWithAI(id);
+            console.log('[ECGAnalysis] Calling AI analyze for', analysis._id);
+            const res = await analyzeECGWithAI(analysis._id);
             console.log('[ECGAnalysis] AI result:', res);
             await fetchAnalysis();
         } catch (err: any) {
@@ -605,6 +606,9 @@ export default function ECGAnalysis() {
     const imageUrl =
         location.state?.imageUrl ? getImageUrl(location.state.imageUrl) : getImageUrl(rawUrl);
 
+    console.log("[ECGAnalysis] rawUrl:", rawUrl);
+    console.log("[ECGAnalysis] Final imageUrl:", imageUrl);
+
     console.log("ANALYSIS =", JSON.stringify(analysis, null, 2));
 
     const metrics = extractMetrics(analysis.aiResult);
@@ -631,6 +635,16 @@ export default function ECGAnalysis() {
                 {/* ── Header ── */}
                 <div style={styles.header}>
                     <div style={styles.headerLeft}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => navigate('/ecg-recus')}
+                                style={{ padding: '0 8px', color: '#64748B' }}
+                            >
+                                ← Retour à la liste
+                            </Button>
+                        </div>
                         <h1 style={styles.pageTitle}>Analyse ECG</h1>
                         <p style={styles.pageSub}>
                             {analysis.ecg?.patient?.fullName || 'Patient inconnu'}

@@ -54,13 +54,12 @@ export default function EnvoyerECG() {
       // 1) lier le patient au médecin choisi
       await assignDoctorToPatient(medecin._id);
 
-      // 2) créer l'ECG en base
+      // 2) créer l'ECG en base avec le fichier
       await createPatientECG({
+        file: fichierECG,           // ✅ CORRECTION: Envoyer le vrai fichier
         title: fichierECG.name,
         urgency: urgence,
         notes: message,
-        // Placeholder temporaire tant qu'on ne fait pas encore le vrai upload
-        fileUrl: `/pending/${fichierECG.name}`,
       });
 
       setSubmitted(true);

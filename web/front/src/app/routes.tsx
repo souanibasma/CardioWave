@@ -14,7 +14,7 @@ import ChatbotIA from './pages/ChatbotIA';
 import EcgRecus from './pages/EcgRecus';
 import Notifications from './pages/Notifications';
 import Parametres from './pages/Parametres';
-import ListePatients from './pages/PatientDashboard';
+import MyPatients from './pages/MyPatients';
 import ProfilPatient from './pages/Profilpatient';
 import AdminDashboard     from './pages/Admin';
 import AdminVerification  from './pages/AdminVerification';
@@ -86,7 +86,7 @@ export const router = createBrowserRouter([
     path: '/mes-patients',
     element: (
       <ProtectedRoute allowedRoles={['medecin']}>
-        <ListePatients />
+        <MyPatients />
       </ProtectedRoute>
     ),
   },

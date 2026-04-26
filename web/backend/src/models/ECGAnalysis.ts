@@ -8,6 +8,7 @@ export interface IECGAnalysis extends Document {
   npyFile?: string;
   aiResult?: any;
   doctorNotes?: string;
+  reportUrl?: string;
   status: 'uploaded' | 'digitized' | 'analyzed';
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +42,10 @@ const ecgAnalysisSchema = new Schema<IECGAnalysis>(
       default: null,
     },
     doctorNotes: {
+      type: String,
+      default: "",
+    },
+    reportUrl: {
       type: String,
       default: "",
     },

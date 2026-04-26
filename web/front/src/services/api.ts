@@ -68,13 +68,27 @@ export const getMyDoctor = async () => {
   return res.data;
 };
 
+
 export const createPatientECG = async (data: {
-  title: string;
-  urgency: "normale" | "urgente";
+  file: File;
+  title?: string;
+  doctorId?: string;
+  urgency?: string;
   notes?: string;
-  fileUrl: string;
 }) => {
-  const res = await API.post("/patient/ecgs", data);
+  const formData = new FormData();
+
+  formData.append("file", data.file);
+  formData.append("title", data.title || data.file.name);
+
+  if (data.doctorId) formData.append("doctorId", data.doctorId);
+  if (data.urgency) formData.append("urgency", data.urgency);
+  if (data.notes) formData.append("notes", data.notes);
+
+  const res = await API.post("/patient/ecgs", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
   return res.data;
 };
 
@@ -359,6 +373,7 @@ export const getDoctorMonthlyTrendChart = async () => {
   return res.data;
 };
 
+
 export const getArticles = async () => {
   const res = await API.get("/articles");
   return res.data;
@@ -378,12 +393,32 @@ export const getArticleComments = async (id: string) => {
   const res = await API.get(`/articles/${id}/comments`);
   return res.data;
 };
-
-export const askMedicalChatbot = async (question: string) => {
-  const res = await API.post("/chatbot/ask", { question });
+export const getDoctorReceivedECGs = async () => {
+  const res = await API.get("/ecg/received");
   return res.data;
 };
 
+export const getDoctorMyPatients = async () => {
+  const res = await API.get("/doctor/my-patients");
+  return res.data;
+};
+
+export const askMedicalChatbot = async (
+  question: string,
+  history: { question: string; answer: string }[] = []
+) => {
+  const response = await API.post("/chatbot/ask", {
+    question,
+    history,
+  });
+
+  const data = response.data;
+
+  return {
+    answer: cleanAnswer(data.answer || ""),
+    sources: extractSources(data.answer || ""),
+  };
+};
 /* =========================
    ECG ANALYSIS (CONTRACT)
  ========================= */
@@ -443,7 +478,60 @@ export function getImageUrl(rawPath: string) {
   }
   
   // Node.js source (for original ECG images in uploads/)
-  const cleanPath = rawPath.replace(/\\/g, "/");
+  let cleanPath = rawPath.replace(/\\/g, "/");
+  
+  // Règle 1: Si c'est un fichier "ecg-*.png" (provenance patient), il est à la racine de /uploads
+  const fileName = cleanPath.split('/').pop() || "";
+  if (fileName.startsWith("ecg-")) {
+    cleanPath = `uploads/${fileName}`;
+  } 
+  // Règle 2: Pour les autres fichiers, s'assurer qu'ils ont "ecgs/" si nécessaire
+  else if (cleanPath.startsWith("uploads/") && !cleanPath.startsWith("uploads/ecgs/")) {
+    cleanPath = cleanPath.replace("uploads/", "uploads/ecgs/");
+  }
+
   const normalizedPath = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
   return `http://localhost:5000${normalizedPath}`;
+}
+function extractSources(answer: string): string[] {
+  const sources: string[] = [];
+  let foundSourceLine = false;
+
+  for (const line of answer.split("\n")) {
+    const l = line.toLowerCase().trim();
+    if (l.startsWith("sources :") || l.startsWith("sources:")) {
+      foundSourceLine = true;
+      const part = line
+        .split(":")
+        .slice(1)
+        .join(":")
+        .replace(/[\[\]]/g, "")
+        .trim();
+
+      part.split(",").forEach((s) => {
+        const clean = s.trim();
+        if (clean && clean.length > 1) {
+          sources.push(clean);
+        }
+      });
+    }
+  }
+
+  if (!foundSourceLine) {
+    return [];
+  }
+
+  return [...new Set(sources)];
+}
+function cleanAnswer(answer: string): string {
+  return answer
+    .split("\n")
+    .filter((line) => {
+      const l = line.toLowerCase().trim();
+      return !l.startsWith("sources :") &&
+             !l.startsWith("sources:") &&
+             !l.startsWith("niveau de confiance");
+    })
+    .join("\n")
+    .trim();
 }

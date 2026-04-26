@@ -293,20 +293,64 @@ export const getDoctorRecentAnalyses = async (
 
 /**
  * GET /api/doctor/my-patients
+ * Récupère la liste des patients avec leur dossier ECG complet
  */
 export const getMyPatients = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const doctorId = req.user._id;
+    const User = require("../models/User").default;
+    const ECG = require("../models/ECG").default;
+
+    // 1. Trouver tous les patients du médecin
     const patients = await User.find({
       role: "patient",
-      assignedDoctor: req.user._id,
-    })
-      .select("_id fullName email dateOfBirth gender phone isTemporary createdAt")
-      .sort({ createdAt: -1 });
+      assignedDoctor: doctorId,
+    }).select("_id fullName email phone dateOfBirth gender createdAt").lean();
 
-    res.status(200).json(patients);
+    // 2. Pour chaque patient, récupérer ses ECGs et analyses
+    const patientsWithHistory = await Promise.all(patients.map(async (patient: any) => {
+      const ecgs = await ECG.find({ patient: patient._id })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      // Calcul de l'âge
+      let age = null;
+      if (patient.dateOfBirth) {
+        const diff = Date.now() - new Date(patient.dateOfBirth).getTime();
+        age = new Date(diff).getUTCFullYear() - 1970;
+      }
+
+      // Déterminer le niveau de risque global (basé sur le dernier ECG anormal)
+      const hasUrgent = ecgs.some((e: any) => e.urgent === true);
+      const hasAbnormal = ecgs.some((e: any) => e.result?.toLowerCase().includes("abnormal") || e.result?.toLowerCase().includes("anormal"));
+      const riskLevel = hasUrgent ? "Critique" : (hasAbnormal ? "Anormal" : "Normal");
+
+      return {
+        id: patient._id,
+        fullName: patient.fullName,
+        email: patient.email,
+        phone: patient.phone || "Non renseigné",
+        age: age || "N/A",
+        gender: patient.gender,
+        riskLevel,
+        ecgsCount: ecgs.length,
+        lastActivity: ecgs.length > 0 ? ecgs[0].createdAt : patient.createdAt,
+        ecgs: ecgs.map((e: any) => ({
+          id: e._id,
+          title: e.title || "ECG sans titre",
+          date: e.createdAt,
+          result: e.result || "En attente",
+          condition: e.condition || "N/A",
+          status: e.status,
+          urgent: e.urgent
+        }))
+      };
+    }));
+
+    res.status(200).json(patientsWithHistory);
   } catch (error) {
     console.error("getMyPatients error:", error);
-    res.status(500).json({ message: "Erreur lors de la récupération des patients" });
+    res.status(500).json({ message: "Erreur lors de la récupération des dossiers patients" });
   }
 };
 

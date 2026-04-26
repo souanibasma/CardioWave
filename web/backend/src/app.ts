@@ -24,14 +24,20 @@ app.get("/", (_req, res) => {
   res.send("Backend is running");
 });
 
+// Ligne 33-34
+
 // Static uploads
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // src/uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads/ecgs"))); // src/uploads/ecgs
+app.use("/uploads", express.static(path.join(__dirname, "../uploads"))); // root/uploads
+app.use("/uploads", express.static(path.join(__dirname, "../uploads/ecgs"))); // root/uploads/ecgs
 
 // Auth & core modules
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/doctor", doctorRoutes);
+console.log("🔧 Mounting patient routes on /api/patient");
 app.use("/api/patient", patientRoutes);
 
 // ECG Upload
@@ -60,5 +66,9 @@ app.use("/api/chat", chatRoutes);
 import reportRoutes from "./routes/reportRoutes";
 app.use("/uploads/reports", express.static(path.join(__dirname, "reports")));
 app.use("/api/report", reportRoutes);
+
+// ── Nouveaux routes (flow patient → médecin) ──
+import doctorPatientsRoutes from "./routes/doctorPatients.routes";
+app.use("/api/doctor", doctorPatientsRoutes);
 
 export default app;

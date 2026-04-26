@@ -5,6 +5,7 @@ import ECG from "../models/ECG";
 
 interface AuthRequest extends Request {
   user?: any;
+  file?: Express.Multer.File; // Type pour le fichier uploadé
 }
 
 // GET /api/patient/profile
@@ -143,7 +144,7 @@ export const assignDoctorToPatient = async (
     console.error("assignDoctorToPatient error:", error);
     res
       .status(500)
-      .json({ message: "Erreur lors de l’assignation du médecin" });
+      .json({ message: "Erreur lors de l'assignation du médecin" });
   }
 };
 
@@ -178,10 +179,31 @@ export const uploadPatientECG = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { title, urgency, notes, fileUrl } = req.body;
+    console.log("🚀 uploadPatientECG APPELÉ");
+    console.log("📥 req.body:", JSON.stringify(req.body, null, 2));
+    console.log("📎 req.file:", req.file ? {
+      fieldname: req.file.fieldname,
+      originalname: req.file.originalname,
+      filename: req.file.filename,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : "undefined");
+    console.log("👤 req.user:", req.user ? { _id: req.user._id, role: req.user.role } : "undefined");
 
-    if (!title || !fileUrl) {
-      res.status(400).json({ message: "title et fileUrl sont requis" });
+    const { title, urgency, notes } = req.body;
+
+    // ✅ Vérifier la présence du fichier uploadé par Multer
+    const file = req.file;
+
+    if (!title) {
+      console.log("❌ Erreur: title manquant");
+      res.status(400).json({ message: "Titre requis" });
+      return;
+    }
+
+    if (!file) {
+      console.log("❌ Erreur: fichier manquant");
+      res.status(400).json({ message: "Fichier requis" });
       return;
     }
 
@@ -192,13 +214,21 @@ export const uploadPatientECG = async (
       return;
     }
 
+    // ✅ Générer le chemin du fichier (source de vérité)
+    const filePath = `uploads/ecgs/${file.filename}`;
+
+    // ✅ Créer l'ECG avec les champs unifiés
     const ecg = await ECG.create({
-      patient: patient._id,
-      doctor: patient.assignedDoctor || null,
+      // Source de vérité
+      patient: patient._id,           // ✅ Unifié (plus de patientId séparé)
+      doctor: patient.assignedDoctor as any, // ✅ Unifié avec assertion TypeScript
+      originalImage: filePath,        // ✅ Unifié (plus de fileUrl séparé)
+      
+      // Métadonnées
       title,
-      urgency: urgency || "normale",
-      notes: notes || "",
-      fileUrl,
+      originalFileName: file.originalname,
+      urgent: urgency === "urgente" || urgency === true,
+      diagnosis: notes || "",
       status: "En attente",
     });
 
@@ -208,7 +238,7 @@ export const uploadPatientECG = async (
     });
   } catch (error) {
     console.error("uploadPatientECG error:", error);
-    res.status(500).json({ message: "Erreur lors de l’envoi de l’ECG" });
+    res.status(500).json({ message: "Erreur lors de l'envoi de l'ECG" });
   }
 };
 
@@ -250,7 +280,7 @@ export const getPatientECGById = async (
     console.error("getPatientECGById error:", error);
     res
       .status(500)
-      .json({ message: "Erreur lors de la récupération de l’ECG" });
+      .json({ message: "Erreur lors de la récupération de l'ECG" });
   }
 };
 
@@ -277,7 +307,7 @@ export const deletePatientECG = async (
     console.error("deletePatientECG error:", error);
     res
       .status(500)
-      .json({ message: "Erreur lors de la suppression de l’ECG" });
+      .json({ message: "Erreur lors de la suppression de l'ECG" });
   }
 };
 
@@ -341,6 +371,7 @@ export const changePatientPassword = async (
     });
   }
 };
+
 // GET /api/patient/ecgs/stats
 export const getPatientECGStats = async (
   req: AuthRequest,
@@ -353,7 +384,7 @@ export const getPatientECGStats = async (
       ECG.countDocuments({ patient: patientId }),
       ECG.countDocuments({ patient: patientId, status: "Analysé" }),
       ECG.countDocuments({ patient: patientId, status: "En attente" }),
-      ECG.countDocuments({ patient: patientId, urgency: "urgente" }),
+      ECG.countDocuments({ patient: patientId, urgent: true }),
     ]);
 
     res.status(200).json({
@@ -363,7 +394,7 @@ export const getPatientECGStats = async (
       urgent,
     });
   } catch (error) {
-    console.error("getPatientECGStats error:", error);
+    console.error("getPatientECGStats error:", error)
     res.status(500).json({
       message: "Erreur lors de la récupération des statistiques ECG",
     });

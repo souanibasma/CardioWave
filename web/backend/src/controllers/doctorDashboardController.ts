@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import User from "../models/User";
 import ECG from "../models/ECG";
-import ECGAnalysis from "../models/ECGAnalysis"; // ← ajouter cette ligne
+import ECGAnalysis from "../models/ECGAnalysis";
 
 interface AuthRequest extends Request {
   user?: any;
@@ -178,6 +178,51 @@ export const getDoctorMonthlyTrendChart = async (
     });
   } catch (error) {
     console.error("getDoctorMonthlyTrendChart:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
+// GET /api/ecg/received — ECGs envoyés par les patients au médecin
+export const getDoctorReceivedECGs = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const doctorId = req.user._id;
+
+    const ECGModel = require("../models/ECG").default;
+    const ECGAnalysisModel = require("../models/ECGAnalysis").default;
+
+    // Récupérer tous les ECGs associés à ce médecin (reçus ou créés par lui)
+    const ecgs = await ECGModel.find({
+      $or: [{ doctorId }, { doctor: doctorId }, { uploadedBy: doctorId }],
+    })
+      .populate("patient", "fullName email phone dateOfBirth")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const result = await Promise.all(
+      ecgs.map(async (ecg: any) => {
+        const analysis = await ECGAnalysisModel.findOne({ ecg: ecg._id }).lean();
+        return {
+          ecgId: ecg._id,
+          analysisId: analysis?._id || null,
+          patient: ecg.patient?.fullName || "Upload Direct / Test",
+          patientId: ecg.patient?._id || null,
+          title: ecg.title || "ECG",
+          urgent: ecg.urgent || false,
+          status: analysis?.status || "uploaded",
+          imageUrl: ecg.originalImage || ecg.fileUrl || "",
+          date: new Date(ecg.createdAt).toLocaleDateString("fr-FR"),
+          notes: ecg.diagnosis || "",
+          reportUrl: analysis?.reportUrl || "", // ✅ Ajout du lien PDF direct
+          source: ecg.patient ? "Patient" : "Direct", // ✅ Pour distinguer la source dans le front
+        };
+      })
+    );
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("getDoctorReceivedECGs error:", error);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
