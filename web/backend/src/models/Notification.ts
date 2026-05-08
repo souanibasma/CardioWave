@@ -1,14 +1,16 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface INotification extends Document {
-  recipientRole: "admin";
-  type: "verification" | "inscription" | "ecg" | "systeme";
+  recipientRole: "admin" | "doctor";
+  recipientId?: Types.ObjectId; // Targeted user (especially for doctors)
+  type: "verification" | "inscription" | "ecg" | "systeme" | "ecg_received" | "digitization_completed" | "analysis_completed";
   title: string;
   description: string;
   isRead: boolean;
   actionLabel?: string;
   actionPath?: string;
   relatedUser?: Types.ObjectId;
+  relatedEcg?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,13 +19,17 @@ const notificationSchema = new Schema<INotification>(
   {
     recipientRole: {
       type: String,
-      enum: ["admin"],
-      default: "admin",
+      enum: ["admin", "doctor"],
       required: true,
+    },
+    recipientId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: undefined,
     },
     type: {
       type: String,
-      enum: ["verification", "inscription", "ecg", "systeme"],
+      enum: ["verification", "inscription", "ecg", "systeme", "ecg_received", "digitization_completed", "analysis_completed"],
       required: true,
     },
     title: {
@@ -51,6 +57,11 @@ const notificationSchema = new Schema<INotification>(
     relatedUser: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      default: undefined,
+    },
+    relatedEcg: {
+      type: Schema.Types.ObjectId,
+      ref: "ECG",
       default: undefined,
     },
   },

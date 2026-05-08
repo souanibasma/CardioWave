@@ -10,8 +10,8 @@ export const askChatbot = async (req: Request, res: Response) => {
         message: "La question est obligatoire",
       });
     }
-
-    const response = await axios.post("http://127.0.0.1:8000/chat", {
+    
+    const response = await axios.post("http://127.0.0.1:8002/chat", {
       question,
     });
 

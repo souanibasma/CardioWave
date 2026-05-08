@@ -1,19 +1,26 @@
 import express from "express";
 import {
   getAdminNotifications,
+  getDoctorNotifications,
   markNotificationAsRead,
-  markAllNotificationsAsRead,
-  getUnreadNotificationsCount,
+  markAllDoctorNotificationsAsRead,
+  getUnreadCount,
 } from "../controllers/notificationController";
-import { protect, requireAdmin } from "../middleware/authMiddleware";
+import { protect } from "../middleware/authMiddleware";
 
 const router = express.Router();
 
-router.use(protect, requireAdmin);
+router.use(protect);
 
-router.get("/", getAdminNotifications);
-router.get("/unread-count", getUnreadNotificationsCount);
-router.patch("/read-all", markAllNotificationsAsRead);
+// Routes for both
+router.get("/unread-count", getUnreadCount);
 router.patch("/:id/read", markNotificationAsRead);
+
+// Doctor specific
+router.get("/doctor", getDoctorNotifications);
+router.patch("/doctor/read-all", markAllDoctorNotificationsAsRead);
+
+// Admin specific (can be handled here or kept separate)
+router.get("/admin", getAdminNotifications);
 
 export default router; 

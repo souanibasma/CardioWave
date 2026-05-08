@@ -1,228 +1,139 @@
-import { Request, Response } from "express";
-import User from "../models/User";
-import ECG from "../models/ECG";
-import ECGAnalysis from "../models/ECGAnalysis";
+import { Request, Response } from 'express';
+import ECG from '../models/ECG';
+import ECGAnalysis from '../models/ECGAnalysis';
+import mongoose from 'mongoose';
 
-interface AuthRequest extends Request {
-  user?: any;
-}
-
-const calculateAge = (dateOfBirth?: string | Date) => {
-  if (!dateOfBirth) return null;
-  const dob = new Date(dateOfBirth);
-  const diff = Date.now() - dob.getTime();
-  return new Date(diff).getUTCFullYear() - 1970;
-};
-
-const formatRelativeTime = (date: string | Date) => {
-  const now = new Date().getTime();
-  const target = new Date(date).getTime();
-  const diffMs = now - target;
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-
-  if (diffHours < 1) return "Il y a moins d'1h";
-  if (diffHours < 24) return `Il y a ${diffHours}h`;
-
-  const diffDays = Math.floor(diffHours / 24);
-  return `Il y a ${diffDays}j`;
-};
-
-export const getDoctorDashboardOverview = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const getDoctorDashboardOverview = async (req: Request, res: Response) => {
   try {
-    const doctorId = req.user._id;
+    const doctorId = (req as any).user.id;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
 
-    const startToday = new Date();
-    startToday.setHours(0, 0, 0, 0);
-
-    const receivedToday = await ECG.countDocuments({
-      doctor: doctorId,
-      createdAt: { $gte: startToday },
-    });
-
-    const abnormalDetected = await ECG.countDocuments({
-      doctor: doctorId,
-      result: "Anormal",
-    });
-
-    const activePatients = await User.countDocuments({
-      role: "patient",
-      assignedDoctor: doctorId,
-    });
-
-    const pendingAnalyses = await ECG.countDocuments({
-      doctor: doctorId,
-      status: "pending",
-    });
-
-    res.status(200).json({
-      receivedToday,
-      abnormalDetected,
-      activePatients,
-      pendingAnalyses,
-    });
-  } catch (error) {
-    console.error("getDoctorDashboardOverview:", error);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-};
-
-export const getDoctorRecentECGs = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const doctorId = req.user._id;
-
-    const ecgs = await ECG.find({ doctor: doctorId })
-      .populate("patient", "fullName dateOfBirth")
-      .sort({ createdAt: -1 })
-      .limit(5);
-
-    const formatted = await Promise.all(ecgs.map(async (ecg: any) => {
-      const analysis = await ECGAnalysis.findOne({ ecg: ecg._id });
-      return {
-        id: ecg._id,
-        analysisId: analysis ? analysis._id : null,
-        patient: ecg.patient?.fullName || "Patient inconnu",
-        age: calculateAge(ecg.patient?.dateOfBirth),
-        date: new Date(ecg.createdAt).toLocaleString("fr-FR"),
-        statut: analysis?.status || "uploaded",
-        type: ecg.title || "ECG",
-        urgent: ecg.urgent || false,
-      };
-    }));
-
-    res.status(200).json(formatted);
-  } catch (error) {
-    console.error("getDoctorRecentECGs:", error);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-};
-
-export const getDoctorAlerts = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const doctorId = req.user._id;
-
-    const alerts = await ECG.find({
-      doctor: doctorId,
-      result: "Anormal",
-    })
-      .populate("patient", "fullName")
-      .sort({ createdAt: -1 })
-      .limit(3);
-
-    const formatted = alerts.map((item: any) => ({
-      id: item._id,
-      patient: item.patient?.fullName || "Patient inconnu",
-      condition: item.condition || "Condition inconnue",
-      time: formatRelativeTime(item.createdAt),
-      severity: item.urgent ? "high" : "medium",
-    }));
-
-    res.status(200).json(formatted);
-  } catch (error) {
-    console.error("getDoctorAlerts:", error);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-};
-
-export const getDoctorWeeklyChart = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    // Exemple statique initial, à remplacer plus tard par aggregation Mongo
-    res.status(200).json({
-      labels: ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
-      normal: [8, 11, 7, 9, 10, 5, 3],
-      abnormal: [2, 3, 1, 4, 3, 1, 1],
-    });
-  } catch (error) {
-    console.error("getDoctorWeeklyChart:", error);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-};
-
-export const getDoctorDistributionChart = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    // Version simple initiale
-    res.status(200).json({
-      labels: ["Sinus Normal", "Fibrillation Auric.", "Bradycardie", "Autres"],
-      values: [68, 12, 10, 10],
-    });
-  } catch (error) {
-    console.error("getDoctorDistributionChart:", error);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-};
-
-export const getDoctorMonthlyTrendChart = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    // Version simple initiale
-    res.status(200).json({
-      labels: ["Jan", "Fév", "Mar", "Avr"],
-      received: [38, 45, 41, 52],
-      abnormal: [6, 9, 7, 12],
-    });
-  } catch (error) {
-    console.error("getDoctorMonthlyTrendChart:", error);
-    res.status(500).json({ message: "Erreur serveur" });
-  }
-};
-// GET /api/ecg/received — ECGs envoyés par les patients au médecin
-export const getDoctorReceivedECGs = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
-  try {
-    const doctorId = req.user._id;
-
-    const ECGModel = require("../models/ECG").default;
-    const ECGAnalysisModel = require("../models/ECGAnalysis").default;
-
-    // Récupérer tous les ECGs associés à ce médecin (reçus ou créés par lui)
-    const ecgs = await ECGModel.find({
-      $or: [{ doctorId }, { doctor: doctorId }, { uploadedBy: doctorId }],
-    })
-      .populate("patient", "fullName email phone dateOfBirth")
-      .sort({ createdAt: -1 })
-      .lean();
-
-    const result = await Promise.all(
-      ecgs.map(async (ecg: any) => {
-        const analysis = await ECGAnalysisModel.findOne({ ecg: ecg._id }).lean();
-        return {
-          ecgId: ecg._id,
-          analysisId: analysis?._id || null,
-          patient: ecg.patient?.fullName || "Upload Direct / Test",
-          patientId: ecg.patient?._id || null,
-          title: ecg.title || "ECG",
-          urgent: ecg.urgent || false,
-          status: analysis?.status || "uploaded",
-          imageUrl: ecg.originalImage || ecg.fileUrl || "",
-          date: new Date(ecg.createdAt).toLocaleDateString("fr-FR"),
-          notes: ecg.diagnosis || "",
-          reportUrl: analysis?.reportUrl || "", // ✅ Ajout du lien PDF direct
-          source: ecg.patient ? "Patient" : "Direct", // ✅ Pour distinguer la source dans le front
-        };
+    const [receivedToday, pendingAnalyses] = await Promise.all([
+      ECG.countDocuments({
+        doctor: doctorId,
+        createdAt: { $gte: startOfDay }
+      }),
+      ECG.countDocuments({
+        doctor: doctorId,
+        status: { $in: ['En attente', 'pending'] }
       })
-    );
+    ]);
 
-    res.status(200).json(result);
-  } catch (error) {
-    console.error("getDoctorReceivedECGs error:", error);
-    res.status(500).json({ message: "Erreur serveur" });
+    res.json({
+      receivedToday,
+      pendingAnalyses,
+      // For frontend compatibility, providing 0 for removed stats
+      abnormalDetected: 0,
+      activePatients: 0
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDoctorRecentECGs = async (req: Request, res: Response) => {
+  try {
+    const doctorId = (req as any).user.id;
+    const ecgs = await ECG.find({ doctor: doctorId })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('patient', 'fullName prenom nom dateOfBirth phone');
+
+    const formatted = ecgs.map(e => {
+        const patient: any = e.patient;
+        let age = null;
+        if (patient && patient.dateOfBirth) {
+            const birth = new Date(patient.dateOfBirth);
+            const now = new Date();
+            age = now.getFullYear() - birth.getFullYear();
+        }
+        
+        return {
+            id: e._id,
+            patient: patient ? (patient.fullName || `${patient.prenom} ${patient.nom}`) : 'Inconnu',
+            age: age,
+            date: e.createdAt ? new Date(e.createdAt).toLocaleDateString('fr-FR') : '--',
+            statut: e.status === 'Anormal' ? 'Anormal' : (e.status === 'Normal' ? 'Normal' : 'En attente'),
+            type: 'Repos 12 pistes', // default
+            urgent: e.urgent || false
+        };
+    });
+
+    res.json(formatted);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDoctorDistributionChart = async (req: Request, res: Response) => {
+  try {
+    const doctorId = (req as any).user.id;
+    
+    // 1. Trouver les ECGs de ce médecin
+    const ecgs = await ECG.find({ doctor: doctorId }).select('_id');
+    const ecgIds = ecgs.map(e => e._id);
+
+    // 2. Trouver toutes les analyses terminées
+    const analyses = await ECGAnalysis.find({
+      ecg: { $in: ecgIds },
+      status: 'analyzed'
+    });
+
+    // Map des abréviations vers noms complets en français
+    const mapping: Record<string, string> = {
+      'NSR': 'Normal',
+      'SB': 'Bradycardie',
+      'RBBB': 'Bloc Branche Droit',
+      'RVH': 'Hypertrophie V. D.',
+      'MI': 'Infarctus (MI)',
+      'TWI': 'Inversion Onde T',
+      'STD': 'Sous-décalage ST',
+      'AF': 'Fibrillation Atriale',
+      'AFL': 'Flutter Atrial',
+      'LAFB': 'Hémibloc Ant. Gauche'
+    };
+
+    const counts: Record<string, number> = {};
+
+    analyses.forEach(a => {
+      const anomalies = a.aiResult?.ai_classification?.anomalies;
+      const mainStatus = a.aiResult?.ai_classification?.status;
+
+      if (Array.isArray(anomalies) && anomalies.length > 0) {
+        anomalies.forEach((code: string) => {
+          const fullName = mapping[code] || code;
+          counts[fullName] = (counts[fullName] || 0) + 1;
+        });
+      } else if (mainStatus === 'Normal' || mainStatus === 'NSR') {
+        counts['Normal'] = (counts['Normal'] || 0) + 1;
+      } else if (mainStatus) {
+        counts[mainStatus] = (counts[mainStatus] || 0) + 1;
+      }
+    });
+
+    // Calculer le total des détections pour les pourcentages
+    const totalDetections = Object.values(counts).reduce((a, b) => a + b, 0) || 1;
+
+    // Trier pour n'envoyer que les plus fréquents si besoin, ou tout
+    const labels = Object.keys(counts);
+    const values = labels.map(l => Math.round((counts[l] / totalDetections) * 100));
+
+    res.json({ labels, values });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getDoctorReceivedECGs = async (req: Request, res: Response) => {
+  try {
+    const doctorId = (req as any).user.id;
+    const ecgs = await ECG.find({ doctor: doctorId })
+      .sort({ createdAt: -1 })
+      .populate('patient', 'fullName prenom nom dateOfBirth phone gender');
+
+    res.json(ecgs);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };

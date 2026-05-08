@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { MedecinLayout } from '../components/MedecinLayout';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
+import API from '../../services/api';
+import { getSocket } from '../../services/socket';
+import { toast } from 'sonner';
 import {
   Bell,
   Activity,
@@ -13,64 +17,125 @@ import {
   Filter,
 } from 'lucide-react';
 
-type TypeNotif = 'ecg_recu' | 'ia_analyse' | 'alerte';
+type TypeNotif = 'ecg_recu' | 'ia_analyse' | 'alerte' | 'ecg_received' | 'digitization_completed' | 'analysis_completed';
 type StatutNotif = 'non_lu' | 'lu';
 
 interface Notification {
-  id: number;
+  _id: string;
   type: TypeNotif;
   titre: string;
-  message: string;
-  patient: string;
+  desc: string;
+  patient?: string;
   date: string;
-  heure: string;
-  statut: StatutNotif;
+  lue: boolean;
+  actionPath?: string;
 }
 
-const notificationsData: Notification[] = [
-  { id: 1,  type: 'alerte',     titre: 'Alerte patient critique',       message: 'ECG anormal détecté — Fibrillation Auriculaire', patient: 'Marie Dubois',    date: "Aujourd'hui", heure: '14:30', statut: 'non_lu' },
-  { id: 2,  type: 'ecg_recu',   titre: 'Nouvel ECG reçu',               message: 'Un nouveau fichier ECG a été envoyé',            patient: 'Robert Petit',    date: "Aujourd'hui", heure: '11:05', statut: 'non_lu' },
-  { id: 3,  type: 'ia_analyse', titre: 'Analyse IA terminée',           message: "L'IA a terminé l'analyse de l'ECG",              patient: 'Pierre Lefebvre', date: "Aujourd'hui", heure: '09:45', statut: 'non_lu' },
-  { id: 4,  type: 'ecg_recu',   titre: 'Nouvel ECG reçu',               message: 'Un nouveau fichier ECG a été envoyé',            patient: 'Jean Martin',     date: "Aujourd'hui", heure: '08:20', statut: 'non_lu' },
-  { id: 5,  type: 'alerte',     titre: 'Alerte patient critique',       message: 'ECG anormal détecté — Tachycardie Ventriculaire',patient: 'Sophie Bernard',  date: 'Hier',        heure: '17:10', statut: 'lu' },
-  { id: 6,  type: 'ia_analyse', titre: 'Analyse IA terminée',           message: "L'IA a terminé l'analyse de l'ECG",              patient: 'Anne Rousseau',   date: 'Hier',        heure: '15:30', statut: 'lu' },
-  { id: 7,  type: 'ecg_recu',   titre: 'Nouvel ECG reçu',               message: 'Un nouveau fichier ECG a été envoyé',            patient: 'Marie Dubois',    date: 'Hier',        heure: '10:00', statut: 'lu' },
-  { id: 8,  type: 'ia_analyse', titre: 'Analyse IA terminée',           message: "L'IA a terminé l'analyse de l'ECG",              patient: 'Robert Petit',    date: '30/03/2024',  heure: '14:20', statut: 'lu' },
-  { id: 9,  type: 'ecg_recu',   titre: 'Nouvel ECG reçu',               message: 'Un nouveau fichier ECG a été envoyé',            patient: 'Pierre Lefebvre', date: '29/03/2024',  heure: '09:05', statut: 'lu' },
-  { id: 10, type: 'alerte',     titre: 'Alerte patient critique',       message: 'ECG anormal détecté — Bradycardie Sinusale',     patient: 'Jean Martin',     date: '28/03/2024',  heure: '16:45', statut: 'lu' },
-];
-
-const typeConfig: Record<TypeNotif, { bg: string; color: string; border: string; icon: React.ReactNode; label: string }> = {
+const typeConfig: Record<string, { bg: string; color: string; border: string; icon: React.ReactNode; label: string }> = {
+  ecg_received:   { bg: '#EEF2FF', color: '#534AB7', border: '#C7D2FE', icon: <Activity className="w-4 h-4" />,    label: 'ECG reçu' },
+  digitization_completed: { bg: '#E8F5F2', color: '#0F6E56', border: '#6EE7B7', icon: <Brain className="w-4 h-4" />,       label: 'Digitalisation' },
+  analysis_completed: { bg: '#E8F5F2', color: '#0F6E56', border: '#6EE7B7', icon: <Brain className="w-4 h-4" />,       label: 'Analyse IA' },
   ecg_recu:   { bg: '#EEF2FF', color: '#534AB7', border: '#C7D2FE', icon: <Activity className="w-4 h-4" />,    label: 'ECG reçu' },
   ia_analyse: { bg: '#E8F5F2', color: '#0F6E56', border: '#6EE7B7', icon: <Brain className="w-4 h-4" />,       label: 'Analyse IA' },
   alerte:     { bg: '#FEE2E2', color: '#A32D2D', border: '#FCA5A5', icon: <AlertTriangle className="w-4 h-4" />, label: 'Alerte' },
 };
 
-type Filtre = 'toutes' | TypeNotif;
+type Filtre = 'toutes' | 'ecg_received' | 'digitization_completed' | 'analysis_completed';
 
 export default function Notifications() {
-  const [notifs, setNotifs]   = useState<Notification[]>(notificationsData);
-  const [filtre, setFiltre]   = useState<Filtre>('toutes');
+  const [notifs, setNotifs]   = useState<Notification[]>([]);
+  const [filtre, setFiltre]   = useState<string>('toutes');
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const nonLus = notifs.filter((n) => n.statut === 'non_lu').length;
+  const handleNotificationClick = async (notif: Notification) => {
+    if (!notif.lue) {
+      try {
+        await markRead(notif._id);
+      } catch (error) {
+        console.error("Erreur marquage lu:", error);
+      }
+    }
+    if (notif.actionPath) {
+      navigate(notif.actionPath);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await API.get('/notifications/doctor');
+      setNotifs(res.data);
+    } catch (error) {
+      console.error("Erreur notifications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+
+    const socket = getSocket();
+    socket.on('new_notification', (newNotif: any) => {
+      setNotifs(prev => [newNotif, ...prev]);
+      toast.info(newNotif.titre, {
+        description: newNotif.desc,
+        action: newNotif.actionPath ? {
+          label: 'Voir',
+          onClick: () => navigate(newNotif.actionPath),
+        } : undefined,
+      });
+    });
+
+    return () => {
+      socket.off('new_notification');
+    };
+  }, []);
+
+  const nonLus = notifs.filter((n) => !n.lue).length;
 
   const filtered = notifs.filter((n) => filtre === 'toutes' || n.type === filtre);
 
-  const markAllRead = () =>
-    setNotifs((prev) => prev.map((n) => ({ ...n, statut: 'lu' as StatutNotif })));
+  const markAllRead = async () => {
+    try {
+      await API.patch('/notifications/doctor/read-all');
+      setNotifs((prev) => prev.map((n) => ({ ...n, lue: true })));
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
 
-  const markRead = (id: number) =>
-    setNotifs((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, statut: 'lu' as StatutNotif } : n))
-    );
+  const markRead = async (id: string) => {
+    try {
+      await API.patch(`/notifications/${id}/read`);
+      setNotifs((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, lue: true } : n))
+      );
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
 
-  const deleteNotif = (id: number) =>
-    setNotifs((prev) => prev.filter((n) => n.id !== id));
+  const deleteNotif = (id: string) => {
+    // Si vous avez un endpoint de suppression, appelez-le ici
+    setNotifs((prev) => prev.filter((n) => n._id !== id));
+  };
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  };
 
   // Group by date
   const grouped = filtered.reduce<Record<string, Notification[]>>((acc, n) => {
-    if (!acc[n.date]) acc[n.date] = [];
-    acc[n.date].push(n);
+    const d = formatDate(n.date);
+    if (!acc[d]) acc[d] = [];
+    acc[d].push(n);
     return acc;
   }, {});
 
@@ -137,10 +202,10 @@ export default function Notifications() {
           <Filter className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} />
           {([
             { key: 'toutes',     label: 'Toutes' },
-            { key: 'ecg_recu',   label: 'ECG reçus' },
-            { key: 'ia_analyse', label: 'Analyses IA' },
-            { key: 'alerte',     label: 'Alertes' },
-          ] as { key: Filtre; label: string }[]).map((f) => (
+            { key: 'ecg_received',   label: 'ECG reçus' },
+            { key: 'digitization_completed', label: 'Digitalisation' },
+            { key: 'analysis_completed', label: 'Analyses IA' },
+          ] as { key: string; label: string }[]).map((f) => (
             <button
               key={f.key}
               onClick={() => setFiltre(f.key)}
@@ -163,7 +228,9 @@ export default function Notifications() {
 
         {/* Liste groupée par date */}
         <div className="space-y-6">
-          {Object.entries(grouped).map(([date, items]) => (
+          {loading ? (
+            <div className="text-center py-10">Chargement...</div>
+          ) : Object.entries(grouped).map(([date, items]) => (
             <div key={date}>
               {/* Séparateur date */}
               <div className="flex items-center gap-3 mb-3">
@@ -184,13 +251,14 @@ export default function Notifications() {
                 }}
               >
                 {items.map((notif, idx) => {
-                  const cfg    = typeConfig[notif.type];
+                  const cfg    = typeConfig[notif.type] || typeConfig.ecg_received;
                   const isLast = idx === items.length - 1;
-                  const unread = notif.statut === 'non_lu';
+                  const unread = !notif.lue;
 
                   return (
                     <div
-                      key={notif.id}
+                      key={notif._id}
+                      onClick={() => handleNotificationClick(notif)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -199,9 +267,8 @@ export default function Notifications() {
                         borderBottom: isLast ? 'none' : '1px solid var(--border-color)',
                         background: unread ? 'rgba(83,74,183,0.03)' : 'transparent',
                         transition: 'background 0.12s',
+                        cursor: notif.actionPath ? 'pointer' : 'default',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--background)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = unread ? 'rgba(83,74,183,0.03)' : 'transparent')}
                     >
                       {/* Dot non-lu */}
                       <div
@@ -258,23 +325,20 @@ export default function Notifications() {
                           </Badge>
                         </div>
                         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '1px' }}>
-                          {notif.message}
+                          {notif.desc}
                         </p>
-                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                          {notif.patient}
-                        </span>
                       </div>
 
                       {/* Heure */}
                       <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flexShrink: 0 }}>
-                        {notif.heure}
+                        {formatTime(notif.date)}
                       </span>
 
                       {/* Actions */}
                       <div className="flex items-center gap-1 flex-shrink-0">
                         {unread && (
                           <button
-                            onClick={() => markRead(notif.id)}
+                            onClick={() => markRead(notif._id)}
                             title="Marquer comme lu"
                             style={{
                               width: '30px',
@@ -293,7 +357,7 @@ export default function Notifications() {
                           </button>
                         )}
                         <button
-                          onClick={() => deleteNotif(notif.id)}
+                          onClick={() => deleteNotif(notif._id)}
                           title="Supprimer"
                           style={{
                             width: '30px',
@@ -318,7 +382,7 @@ export default function Notifications() {
             </div>
           ))}
 
-          {filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="text-center py-16" style={{ color: 'var(--text-secondary)' }}>
               <Bell className="w-10 h-10 mx-auto mb-3 opacity-20" />
               <p className="text-sm">Aucune notification</p>

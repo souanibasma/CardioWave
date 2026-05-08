@@ -1,7 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
+import API from '../../services/api';
+import { getSocket } from '../../services/socket';
 import { 
   Activity, 
   LayoutDashboard, 
@@ -35,6 +37,40 @@ export function MedecinLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await API.get('/notifications/unread-count');
+      setUnreadCount(res.data.count);
+    } catch (error) {
+      console.error("Erreur unread count:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnreadCount();
+
+    const socket = getSocket();
+    const handleNewNotif = () => {
+      setUnreadCount(prev => prev + 1);
+    };
+
+    socket.on('new_notification', handleNewNotif);
+
+    return () => {
+      socket.off('new_notification', handleNewNotif);
+    };
+  }, []);
+
+  // Refresh count when navigating to/from notifications
+  useEffect(() => {
+    if (location.pathname !== '/notifications') {
+      fetchUnreadCount();
+    } else {
+      setUnreadCount(0); // Assume they'll read them
+    }
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -83,7 +119,14 @@ export function MedecinLayout({ children }: { children: ReactNode }) {
                 color: isActive(item.path) ? '#FFFFFF' : 'var(--text-secondary)',
               }}
             >
-              {item.icon}
+              <div className="relative">
+                {item.icon}
+                {item.path === '/notifications' && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white border-2 border-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </div>
               <span className="font-medium text-sm">{item.label}</span>
             </Link>
           ))}

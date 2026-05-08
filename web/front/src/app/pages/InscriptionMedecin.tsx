@@ -1,51 +1,47 @@
 // src/app/pages/InscriptionMedecin.tsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import API from '../../services/api';
 
 export default function InscriptionMedecin() {
   const [nom, setNom]                         = useState('');
   const [prenom, setPrenom]                   = useState('');
   const [specialite, setSpecialite]           = useState('');
+  const [licenseNumber, setLicenseNumber]     = useState('');
+  const [hospitalOrClinic, setHospitalOrClinic] = useState('');
   const [email, setEmail]                     = useState('');
   const [password, setPassword]               = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [carteMedicale, setCarteMedicale]     = useState<File | null>(null);
   const [showPass, setShowPass]               = useState(false);
   const [showConfirm, setShowConfirm]         = useState(false);
-  const [dragOver, setDragOver]               = useState(false);
   const [error, setError]                     = useState('');
   const [isLoading, setIsLoading]             = useState(false);
   const [isSubmitted, setIsSubmitted]         = useState(false);
+  const [isAutoApproved, setIsAutoApproved]   = useState(false);
   const [step, setStep]                       = useState(1);
-  const { signup } = useAuth();
-  const navigate   = useNavigate();
-
-  const handleFileChange = (file: File | null) => {
-    if (file && file.size <= 5 * 1024 * 1024) setCarteMedicale(file);
-    else if (file) setError('Fichier trop volumineux (max 5 MB)');
-  };
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!carteMedicale)               return setError('Veuillez télécharger votre carte médicale.');
     if (password !== confirmPassword) return setError('Les mots de passe ne correspondent pas.');
     if (password.length < 6)          return setError('Le mot de passe doit contenir au moins 6 caractères.');
     setIsLoading(true);
     try {
-      await signup({
-      nom,
-      prenom,
-      specialite,
-      email,
-      password,
-      carteMedicale,
-      role: 'medecin',
-    });
+      const fullName = `${prenom} ${nom}`.trim();
+      const res = await API.post('/auth/register', {
+        fullName,
+        email,
+        password,
+        role: 'doctor',
+        specialty: specialite,
+        licenseNumber,
+        hospitalOrClinic,
+      });
+      setIsAutoApproved(res.data.user?.isApproved === true);
       setIsSubmitted(true);
-    } catch {
-      setError('Une erreur est survenue. Veuillez réessayer.');
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsLoading(false);
     }
@@ -67,13 +63,21 @@ export default function InscriptionMedecin() {
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
               </svg>
             </div>
-            <h2 style={s.successTitle}>Demande envoyée !</h2>
-            <p style={s.successText}>Votre compte sera activé après vérification de votre carte médicale par l'administrateur. Vous recevrez un email de confirmation sous 24h.</p>
+            <h2 style={s.successTitle}>{isAutoApproved ? 'Compte activé !' : 'Demande envoyée !'}</h2>
+            <p style={s.successText}>
+              {isAutoApproved
+                ? 'Votre numéro d\'inscription a été vérifié automatiquement. Vous pouvez vous connecter et accéder à votre dashboard dès maintenant.'
+                : 'Votre numéro d\'inscription n\'a pas été reconnu automatiquement. Un administrateur vérifiera votre compte sous 24h.'}
+            </p>
             <div style={s.successInfo}>
-              <span style={{ fontSize:'1.1rem' }}>📋</span>
-              <span style={{ fontSize:'.88rem', color:'#1a5fc8', fontWeight:500 }}>Vérification en cours · Délai estimé : 24h</span>
+              <span style={{ fontSize:'1.1rem' }}>{isAutoApproved ? '✅' : '📋'}</span>
+              <span style={{ fontSize:'.88rem', color:'#1a5fc8', fontWeight:500 }}>
+                {isAutoApproved ? 'Accès immédiat · Connectez-vous' : 'Vérification en cours · Délai estimé : 24h'}
+              </span>
             </div>
-            <Link to="/connexion" style={s.successBtn}>Retour à la connexion</Link>
+            <Link to="/connexion" style={s.successBtn}>
+              {isAutoApproved ? 'Se connecter' : 'Retour à la connexion'}
+            </Link>
           </div>
         </div>
       </div>
@@ -217,7 +221,7 @@ export default function InscriptionMedecin() {
               </div>
 
               <div className="cw-fadeup" style={s.stepRow}>
-                {[{ n:1, label:'Informations' }, { n:2, label:'Sécurité & Document' }].map(st => (
+                {[{ n:1, label:'Informations' }, { n:2, label:'Sécurité' }].map(st => (
                   <div key={st.n} style={s.stepItem}>
                     <div style={{
                       ...s.stepCircle,
@@ -249,9 +253,11 @@ export default function InscriptionMedecin() {
                         <Field label="Nom" icon="user"><input className="cw-input" type="text" placeholder="Dupont" value={nom} onChange={e=>setNom(e.target.value)} required style={{ paddingLeft:44 }}/></Field>
                       </div>
                       <Field label="Spécialité médicale" icon="stethoscope"><input className="cw-input" type="text" placeholder="Cardiologie, Médecine interne…" value={specialite} onChange={e=>setSpecialite(e.target.value)} required style={{ paddingLeft:44 }}/></Field>
+                      <Field label="N° d'inscription (Licence)" icon="license"><input className="cw-input" type="text" placeholder="TN-14587" value={licenseNumber} onChange={e=>setLicenseNumber(e.target.value)} required style={{ paddingLeft:44 }}/></Field>
+                      <Field label="Hôpital / Clinique" icon="hospital"><input className="cw-input" type="text" placeholder="CHU Tunis, Clinique El Manar…" value={hospitalOrClinic} onChange={e=>setHospitalOrClinic(e.target.value)} required style={{ paddingLeft:44 }}/></Field>
                       <Field label="Email professionnel" icon="email"><input className="cw-input" type="email" placeholder="dr.dupont@hopital.fr" value={email} onChange={e=>setEmail(e.target.value)} required style={{ paddingLeft:44 }}/></Field>
                       {error && <ErrBox msg={error}/>}
-                      <button type="button" className="cw-btn" onClick={() => { if (!prenom||!nom||!specialite||!email) { setError('Veuillez remplir tous les champs.'); return; } setError(''); setStep(2); }} style={{ marginTop:8 }}>
+                      <button type="button" className="cw-btn" onClick={() => { if (!prenom||!nom||!specialite||!licenseNumber||!hospitalOrClinic||!email) { setError('Veuillez remplir tous les champs.'); return; } setError(''); setStep(2); }} style={{ marginTop:8 }}>
                         Continuer
                         <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round"><path d="M4 10h12M12 4l6 6-6 6"/></svg>
                       </button>
@@ -283,40 +289,9 @@ export default function InscriptionMedecin() {
                         </div>
                       </div>
                       {password && <PasswordStrength pwd={password}/>}
-                      <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
-                        <label style={s.label}>
-                          Carte médicale <span style={{ color:'#e74d7f' }}>*</span>
-                          <span style={{ color:'#aab4cc', fontWeight:400, marginLeft:8 }}>PDF, JPG ou PNG · max 5 MB</span>
-                        </label>
-                        <div
-                          className={dragOver ? 'cw-drop-active' : 'cw-drop'}
-                          onClick={() => document.getElementById('carte-upload')?.click()}
-                          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                          onDragLeave={() => setDragOver(false)}
-                          onDrop={e => { e.preventDefault(); setDragOver(false); handleFileChange(e.dataTransfer.files[0]); }}
-                        >
-                          {carteMedicale ? (
-                            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-                              <div style={s.fileIcon}><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#1a5fc8" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                              <div>
-                                <p style={{ fontWeight:600, fontSize:'.9rem', color:'#1a1e2e' }}>{carteMedicale.name}</p>
-                                <p style={{ fontSize:'.78rem', color:'#6b7a99' }}>{(carteMedicale.size/1024).toFixed(1)} KB · Prêt à envoyer</p>
-                              </div>
-                              <button type="button" onClick={e=>{e.stopPropagation();setCarteMedicale(null);}} style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:'#e74d7f', fontSize:'.8rem', fontWeight:600 }}>✕ Retirer</button>
-                            </div>
-                          ) : (
-                            <>
-                              <div style={s.uploadIcon}><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#1a5fc8" strokeWidth="1.6" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-                              <p style={{ fontWeight:600, color:'#1a1e2e', fontSize:'.95rem' }}>Glissez ou cliquez pour télécharger</p>
-                              <p style={{ fontSize:'.82rem', color:'#6b7a99', marginTop:4 }}>Votre carte médicale professionnelle</p>
-                            </>
-                          )}
-                          <input id="carte-upload" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e=>handleFileChange(e.target.files?.[0]??null)} style={{ display:'none' }}/>
-                        </div>
-                      </div>
                       <div style={s.infoBanner}>
                         <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="#1a5fc8" strokeWidth="1.7" strokeLinecap="round" style={{ flexShrink:0 }}><circle cx="10" cy="10" r="8"/><line x1="10" y1="7" x2="10" y2="10"/><circle cx="10" cy="13" r=".5" fill="#1a5fc8"/></svg>
-                        Votre compte sera activé après vérification par l'administrateur. Délai estimé : 24h.
+                        Si votre N° d'inscription est reconnu, votre compte sera activé immédiatement. Sinon, un administrateur le vérifiera sous 24h.
                       </div>
                       {error && <ErrBox msg={error}/>}
                       <div style={{ display:'flex', gap:12, marginTop:4 }}>
@@ -357,6 +332,8 @@ function Field({ label, icon, children }: { label:string; icon:string; children:
           {icon==='user'        && <IconUser/>}
           {icon==='stethoscope' && <IconSteth/>}
           {icon==='email'       && <IconMail/>}
+          {icon==='license'     && <IconLicense/>}
+          {icon==='hospital'    && <IconHospital/>}
         </span>
         {children}
       </div>
@@ -396,6 +373,8 @@ function ErrBox({ msg }: { msg:string }) {
 const IconUser  = () => <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8899bb" strokeWidth="1.6" strokeLinecap="round"><path d="M10 9a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 9a7 7 0 0 1 14 0"/></svg>;
 const IconSteth = () => <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8899bb" strokeWidth="1.6" strokeLinecap="round"><path d="M5 3v7a5 5 0 0 0 10 0V3"/><circle cx="15" cy="15" r="2"/><path d="M15 13v-2"/></svg>;
 const IconMail  = () => <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8899bb" strokeWidth="1.6" strokeLinecap="round"><rect x="2" y="4" width="16" height="12" rx="2"/><path d="M2 4l8 7 8-7"/></svg>;
+const IconLicense = () => <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8899bb" strokeWidth="1.6" strokeLinecap="round"><rect x="2" y="3" width="16" height="14" rx="2"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="11" x2="10" y2="11"/></svg>;
+const IconHospital = () => <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8899bb" strokeWidth="1.6" strokeLinecap="round"><rect x="3" y="4" width="14" height="14" rx="2"/><line x1="10" y1="7" x2="10" y2="13"/><line x1="7" y1="10" x2="13" y2="10"/></svg>;
 const IconLock  = () => (
   <span style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', display:'flex', alignItems:'center', zIndex:1, pointerEvents:'none' }}>
     <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="#8899bb" strokeWidth="1.6" strokeLinecap="round"><rect x="4" y="8" width="12" height="10" rx="2"/><path d="M7 8V6a3 3 0 0 1 6 0v2"/></svg>

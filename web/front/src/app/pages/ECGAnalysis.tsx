@@ -865,7 +865,7 @@ export default function ECGAnalysis() {
                                             <div>
                                                 <p style={styles.sectionLabel}>Tracé 12 dérivations</p>
                                                 <img
-                                                    src={getImageUrl(analysis.plot12leads.replace('http://localhost:8000', ''))}
+                                                    src={getImageUrl(analysis.plot12leads)}
                                                     alt="12 Leads"
                                                     style={styles.digitizedImg}
                                                 />
@@ -875,7 +875,7 @@ export default function ECGAnalysis() {
                                             <div>
                                                 <p style={styles.sectionLabel}>Lead II Complet</p>
                                                 <img
-                                                    src={getImageUrl(analysis.plotFullLeadII.replace('http://localhost:8000', ''))}
+                                                    src={getImageUrl(analysis.plotFullLeadII)}
                                                     alt="Full Lead II"
                                                     style={styles.digitizedImg}
                                                 />

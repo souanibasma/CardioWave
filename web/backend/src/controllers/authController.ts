@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/User";
+import ApprovedLicense from "../models/ApprovedLicense";
 import bcrypt from "bcryptjs";
 import generateToken from "../utils/generateToken";
 import { createAdminNotification } from "../utils/createNotification";
@@ -75,6 +76,15 @@ export const registerUser = async (
       return;
     }
 
+    // ── Auto-approval logic for doctors ──
+    let isApproved = role === "patient"; // patients always approved
+    if (role === "doctor") {
+      const approved = await ApprovedLicense.findOne({
+        licenseNumber: licenseNumber.trim().toUpperCase(),
+      });
+      isApproved = !!approved;
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -83,7 +93,7 @@ export const registerUser = async (
       email,
       password: hashedPassword,
       role,
-      isApproved: role === "patient",
+      isApproved,
 
       phone: role === "patient" ? phone : undefined,
       dateOfBirth: role === "patient" ? dateOfBirth : undefined,
@@ -96,14 +106,23 @@ export const registerUser = async (
 
     // Notifications admin
     if (role === "doctor") {
-      await createAdminNotification({
-        type: "verification",
-        title: "Nouvelle demande de vérification",
-        description: `${newUser.fullName} a soumis une demande de vérification médecin.`,
-        actionLabel: "Vérifier",
-        actionPath: "/admin/verification",
-        relatedUser: String(newUser._id),
-      });
+      if (isApproved) {
+        await createAdminNotification({
+          type: "verification",
+          title: "Médecin auto-approuvé",
+          description: `${newUser.fullName} a été automatiquement approuvé (licence ${licenseNumber} vérifiée).`,
+          relatedUser: String(newUser._id),
+        });
+      } else {
+        await createAdminNotification({
+          type: "verification",
+          title: "Nouvelle demande de vérification",
+          description: `${newUser.fullName} a soumis une demande de vérification médecin (licence ${licenseNumber} non reconnue).`,
+          actionLabel: "Vérifier",
+          actionPath: "/admin/verification",
+          relatedUser: String(newUser._id),
+        });
+      }
     }
 
     if (role === "patient") {
@@ -165,9 +184,18 @@ export const loginUser = async (
       return;
     }
 
+    // ── Doctor pending approval — return user info without token ──
     if (user.role === "doctor" && !user.isApproved) {
-      res.status(403).json({
-        message: "Your doctor account is pending admin approval",
+      res.status(200).json({
+        requiresApproval: true,
+        message: "Votre compte médecin est en attente de validation par l'administrateur.",
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          role: user.role,
+          isApproved: user.isApproved,
+        },
       });
       return;
     }
@@ -195,4 +223,4 @@ export const loginUser = async (
       message: "Server error during login",
     });
   }
-};
+};

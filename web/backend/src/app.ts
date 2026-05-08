@@ -49,8 +49,8 @@ app.use("/api/ecg-analysis", ecgAnalysisRoutes);
 // Doctor dashboard
 app.use("/api/doctor/dashboard", doctorDashboardRoutes);
 
-// Admin notifications
-app.use("/api/admin/notifications", notificationRoutes);
+// Notifications (Admin & Doctor)
+app.use("/api/notifications", notificationRoutes);
 
 // Admin article management
 app.use("/api/admin/articles", articleRoutes);

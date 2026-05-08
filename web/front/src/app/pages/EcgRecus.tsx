@@ -71,7 +71,20 @@ export default function EcgRecus() {
       try {
         setLoadingList(true);
         const data = await getDoctorReceivedECGs();
-        setReceivedECGs(data);
+        const formatted = data.map((e: any) => ({
+          ecgId: e._id,
+          analysisId: null, // We'll let the next page handle creating/finding the analysis
+          patient: e.patient, // Keep as object, handled in JSX
+          patientId: e.patient?._id || null,
+          title: e.title,
+          urgent: e.urgent || false,
+          status: e.status || 'uploaded',
+          date: new Date(e.createdAt).toLocaleDateString('fr-FR'),
+          source: e.patient ? "Patient" : "Direct",
+          imageUrl: e.originalImage,
+          notes: e.notes || ''
+        }));
+        setReceivedECGs(formatted);
       } catch (err) {
         setListError("Erreur lors du chargement des ECGs reçus");
         console.error(err);
@@ -213,7 +226,11 @@ export default function EcgRecus() {
 
                 {/* Patient */}
                 <div className="col-span-2 flex items-center gap-3">
-                  <span className="font-500 text-gray-900 text-sm truncate">{ecg.patient}</span>
+                  <span className="font-500 text-gray-900 text-sm truncate">
+                    {typeof ecg.patient === 'object' && ecg.patient !== null 
+                      ? (ecg.patient as any).fullName || `${(ecg.patient as any).prenom} ${(ecg.patient as any).nom}`
+                      : ecg.patient || 'Inconnu'}
+                  </span>
                 </div>
 
                 {/* Titre */}

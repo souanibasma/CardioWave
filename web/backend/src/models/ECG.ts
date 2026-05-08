@@ -1,24 +1,24 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 
 export type EcgStatus = "Anormal" | "Normal" | "En attente" | "pending";
 
+// ── Champs réels du schéma ──
 export interface IECG {
-  // ── Source de vérité unique ──
   title: string;
   originalImage: string; // Chemin du fichier (source de vérité)
   patient?: mongoose.Types.ObjectId; // Patient (OPTIONNEL pour flux médecin direct)
   doctor?: mongoose.Types.ObjectId; // Médecin assigné (source de vérité)
   uploadedBy?: mongoose.Types.ObjectId;
-  
-  // ── Métadonnées ──
   originalFileName?: string;
   diagnosis?: string;
   urgent?: boolean;
   status?: EcgStatus;
   result?: string;
   condition?: string;
+}
 
-  // ── Alias virtuels (rétrocompatibilité) ──
+// ── Alias virtuels (séparés car non présents dans le schéma Mongoose) ──
+export interface IECGVirtuals {
   patientId?: Types.ObjectId;
   doctorId?: Types.ObjectId;
   fileUrl?: string;
@@ -105,4 +105,4 @@ ecgSchema.index({ patient: 1, createdAt: -1 });
 ecgSchema.index({ doctor: 1, createdAt: -1 });
 ecgSchema.index({ status: 1 });
 
-export default mongoose.model<IECG & mongoose.Document>("ECG", ecgSchema);
+export default mongoose.model<IECG>("ECG", ecgSchema);

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from "react";
 import API from "../../services/api";
+import { connectSocket, disconnectSocket } from "../../services/socket";
 
 export type UserRole = "medecin" | "patient" | "admin";
 
@@ -10,7 +11,7 @@ export interface User {
   email: string;
   role: UserRole;
   specialite?: string;
-  carteVerifiee?: boolean;
+  isApproved: boolean;
   phone?: string;
   dateOfBirth?: string;
   hospitalOrClinic?: string;
@@ -18,6 +19,8 @@ export interface User {
 
 interface AuthContextType {
   user: User | null;
+  pendingUser: User | null;
+  isPending: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => void;
@@ -33,7 +36,6 @@ export interface SignupData {
   specialite?: string;
   telephone?: string;
   dateNaissance?: string;
-  carteMedicale?: File;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,7 +58,7 @@ function mapBackendUserToFrontendUser(backendUser: any): User {
         ? "patient"
         : "admin",
     specialite: backendUser.specialty || "",
-    carteVerifiee: backendUser.role === "doctor" ? !!backendUser.isApproved : true,
+    isApproved: backendUser.isApproved ?? true,
     phone: backendUser.phone || "",
     dateOfBirth: backendUser.dateOfBirth || "",
     hospitalOrClinic: backendUser.hospitalOrClinic || "",
@@ -65,14 +67,27 @@ function mapBackendUserToFrontendUser(backendUser: any): User {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
+    const savedPendingUser = localStorage.getItem("pendingUser");
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        if (parsedUser.id) {
+          connectSocket(parsedUser.id);
+        }
       } catch {
         localStorage.removeItem("user");
+      }
+    }
+    if (savedPendingUser) {
+      try {
+        setPendingUser(JSON.parse(savedPendingUser));
+      } catch {
+        localStorage.removeItem("pendingUser");
       }
     }
   }, []);
@@ -81,12 +96,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await API.post("/auth/login", { email, password });
 
+      // ── Doctor pending approval (no token returned) ──
+      if (res.data.requiresApproval) {
+        const mappedUser = mapBackendUserToFrontendUser(res.data.user);
+
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+
+        localStorage.setItem("pendingUser", JSON.stringify(mappedUser));
+        setPendingUser(mappedUser);
+        return;
+      }
+
+      // ── Normal login ──
       localStorage.setItem("token", res.data.token);
 
       const mappedUser = mapBackendUserToFrontendUser(res.data.user);
-
       localStorage.setItem("user", JSON.stringify(mappedUser));
       setUser(mappedUser);
+      if (mappedUser.id) {
+        connectSocket(mappedUser.id);
+      }
+      localStorage.removeItem("pendingUser");
+      setPendingUser(null);
     } catch (error: any) {
       throw error?.response?.data?.message || "Email ou mot de passe incorrect.";
     }
@@ -108,14 +141,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Doctor signup — should use InscriptionMedecin directly, but keep as fallback
       await API.post("/auth/register", {
         fullName,
         email: data.email,
         password: data.password,
         role: "doctor",
         specialty: data.specialite || "",
-        licenseNumber: "TEMP-LICENSE",
-        hospitalOrClinic: "À renseigner",
+        licenseNumber: undefined,
+        hospitalOrClinic: undefined,
       });
     } catch (error: any) {
       throw error?.response?.data?.message || "Erreur lors de l'inscription.";
@@ -125,13 +159,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("pendingUser");
     setUser(null);
+    setPendingUser(null);
+    disconnectSocket();
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        pendingUser,
+        isPending: !!pendingUser && !user,
         login,
         signup,
         logout,

@@ -20,7 +20,7 @@ import AdminDashboard     from './pages/Admin';
 import AdminVerification  from './pages/AdminVerification';
 import AdminArticles      from './pages/AdminArticles';
 import AdminNotifications from './pages/AdminNotifications';
-
+import AttenteMedecin from './pages/AttenteMedecin';
 // Dans le tableau de routes :
 
 // ✅ Nouvelles pages Patient
@@ -45,6 +45,10 @@ export const router = createBrowserRouter([
   {
     path: '/inscription-patient',
     element: <InscriptionPatient />,
+  },
+  {
+    path: '/attente-validation',
+    element: <AttenteMedecin />,
   },
 
   // ✅ Routes Patient (protégées rôle "patient")

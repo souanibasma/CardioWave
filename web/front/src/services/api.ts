@@ -463,29 +463,37 @@ export async function generateReport(id: string, chatSummary?: string) {
 
 /**
  * Resolves image URLs based on source:
- * - http://... -> return as is
- * - /files/... -> FastAPI (port 8000)
- * - Else (ex: "uploads/xxx.png") -> Node.js Backend (port 5000)
+ * - http://localhost:8000/... → strip host prefix then re-add (normalize port)
+ * - /files/... or files/...  → FastAPI Digitization (port 8000)
+ * - uploads/...              → Node.js Backend (port 5000)
  */
 export function getImageUrl(rawPath: string) {
   if (!rawPath) return "";
+
+  // If full URL from FastAPI (stored as http://localhost:8000/files/...)
+  // strip the host part and let the logic below re-add it consistently
+  if (rawPath.startsWith("http://localhost:8000")) {
+    rawPath = rawPath.replace("http://localhost:8000", "");
+  }
+
+  // Already an absolute http URL (other host) → return as-is
   if (rawPath.startsWith("http")) return rawPath;
-  
-  // FastAPI source
-  if (rawPath.includes("/files/")) {
+
+  // FastAPI digitization source: paths containing /files/ or starting with files/
+  if (rawPath.includes("/files/") || rawPath.startsWith("files/")) {
     const cleanPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
     return `http://localhost:8000${cleanPath}`;
   }
-  
-  // Node.js source (for original ECG images in uploads/)
+
+  // Node.js backend source (uploads/)
   let cleanPath = rawPath.replace(/\\/g, "/");
-  
-  // Règle 1: Si c'est un fichier "ecg-*.png" (provenance patient), il est à la racine de /uploads
-  const fileName = cleanPath.split('/').pop() || "";
+
+  // Rule 1: patient ECG files ("ecg-*.png") live at the root of /uploads
+  const fileName = cleanPath.split("/").pop() || "";
   if (fileName.startsWith("ecg-")) {
     cleanPath = `uploads/${fileName}`;
-  } 
-  // Règle 2: Pour les autres fichiers, s'assurer qu'ils ont "ecgs/" si nécessaire
+  }
+  // Rule 2: other files — ensure they have the ecgs/ sub-directory
   else if (cleanPath.startsWith("uploads/") && !cleanPath.startsWith("uploads/ecgs/")) {
     cleanPath = cleanPath.replace("uploads/", "uploads/ecgs/");
   }

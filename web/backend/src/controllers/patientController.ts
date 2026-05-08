@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import User from "../models/User";
 import ECG from "../models/ECG";
+import { createNotification } from "../utils/notificationService";
 
 interface AuthRequest extends Request {
   user?: any;
@@ -231,6 +232,21 @@ export const uploadPatientECG = async (
       diagnosis: notes || "",
       status: "En attente",
     });
+
+    // 🔔 Notification pour le médecin
+    if (patient.assignedDoctor) {
+      await createNotification({
+        recipientRole: "doctor",
+        recipientId: (patient.assignedDoctor as any)._id || patient.assignedDoctor,
+        type: "ecg_received",
+        title: "Nouvel ECG reçu",
+        description: `Le patient ${patient.fullName} vous a envoyé un nouvel ECG : ${title}`,
+        actionLabel: "Voir l'ECG",
+        actionPath: `/ecg-recus`, // Ajustez le chemin selon votre front
+        relatedUser: patient._id,
+        relatedEcg: (ecg as any)._id,
+      });
+    }
 
     res.status(201).json({
       message: "ECG envoyé avec succès",

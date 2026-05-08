@@ -19,11 +19,15 @@ export default function Connexion() {
     try {
       await login(email, password);
       const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      if (savedUser?.role === 'patient') {
+      const pending = !!localStorage.getItem('pendingUser');
+
+      if (pending) {
+        navigate('/attente-validation');
+      } else if (savedUser?.role === 'patient') {
         navigate('/patient/dashboard');
       } else if (savedUser?.role === 'admin') {
-      navigate('/admin/dashboard'); 
-      }else {
+        navigate('/admin/dashboard'); 
+      } else {
         navigate('/tableau-de-bord');
       }
     } catch {

@@ -6,6 +6,7 @@ import FormData from "form-data";
 import ECG from "../models/ECG";
 import ECGAnalysis from "../models/ECGAnalysis";
 import User from "../models/User";
+import { createNotification } from "../utils/notificationService";
 
 const FASTAPI_URL = "http://localhost:8000";
 const AI_MODEL_URL = "http://localhost:8001";
@@ -207,6 +208,21 @@ export const digitizeECGAnalysis = async (req: Request, res: Response) => {
     analysis.status = 'digitized';
 
     await analysis.save();
+
+    // 🔔 Notification pour le médecin
+    if (ecg.doctor) {
+      await createNotification({
+        recipientRole: "doctor",
+        recipientId: ecg.doctor.toString(),
+        type: "digitization_completed",
+        title: "Digitalisation terminée",
+        description: `La digitalisation de l'ECG "${ecg.title}" est terminée.`,
+        actionLabel: "Voir l'analyse",
+        actionPath: `/ecg-analysis/${analysis._id}`,
+        relatedEcg: ecg._id,
+      });
+    }
+
     res.status(200).json(analysis);
   } catch (error: any) {
     console.error("digitizeECGAnalysis error:", error);
@@ -289,6 +305,22 @@ export const analyzeECGWithAI = async (req: Request, res: Response) => {
 
     await analysis.save();
     console.log(`[AI Analyze] Success for analysis ${id}`);
+
+    // 🔔 Notification pour le médecin
+    const ecg = await ECG.findById(analysis.ecg);
+    if (ecg && ecg.doctor) {
+      await createNotification({
+        recipientRole: "doctor",
+        recipientId: ecg.doctor.toString(),
+        type: "analysis_completed",
+        title: "Analyse IA terminée",
+        description: `L'analyse IA de l'ECG "${ecg.title}" est terminée.`,
+        actionLabel: "Voir les résultats",
+        actionPath: `/ecg-analysis/${analysis._id}`,
+        relatedEcg: ecg._id,
+      });
+    }
+
     res.status(200).json(analysis);
   } catch (error: any) {
     console.error("analyzeECGWithAI error:", error);
