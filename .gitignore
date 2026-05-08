@@ -74,3 +74,6 @@ structure.txt
 # CONDA / EXPORT
 # ===========================
 *.yml
+web/backend/src/reports/*.pdf
+web/Back2/.env
+web/backend/.env
