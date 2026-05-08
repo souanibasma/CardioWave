@@ -5,10 +5,15 @@ import { AuthRequest } from "../middleware/authMiddleware";
 // GET /api/notifications/doctor
 export const getDoctorNotifications = async (req: AuthRequest, res: Response) => {
   try {
-    const doctorId = req.user._id;
+    if (!req.user) {
+      res.status(401).json({ message: "Non authentifié" });
+      return;
+    }
+    const userId = req.user._id;
+    const userRole = req.user.role;
     const notifications = await Notification.find({
-      recipientRole: "doctor",
-      recipientId: doctorId,
+      recipientRole: userRole,
+      recipientId: userId,
     }).sort({ createdAt: -1 });
 
     const formatted = notifications.map((n) => ({
@@ -42,8 +47,11 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
       });
     }
 
-    // Verify ownership for doctors
-    if (notif.recipientRole === "doctor" && notif.recipientId?.toString() !== req.user._id.toString()) {
+    // Verify ownership for non-admins
+    if (!req.user) {
+      return res.status(401).json({ message: "Non authentifié" });
+    }
+    if (notif.recipientRole !== "admin" && notif.recipientId?.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: "Action non autorisée" });
     }
 
@@ -63,9 +71,14 @@ export const markNotificationAsRead = async (req: AuthRequest, res: Response) =>
 // PATCH /api/notifications/read-all
 export const markAllDoctorNotificationsAsRead = async (req: AuthRequest, res: Response) => {
   try {
-    const doctorId = req.user._id;
+    if (!req.user) {
+      res.status(401).json({ message: "Non authentifié" });
+      return;
+    }
+    const userId = req.user._id;
+    const userRole = req.user.role;
     await Notification.updateMany(
-      { recipientRole: "doctor", recipientId: doctorId, isRead: false },
+      { recipientRole: userRole, recipientId: userId, isRead: false },
       { $set: { isRead: true } }
     );
 
@@ -82,12 +95,16 @@ export const markAllDoctorNotificationsAsRead = async (req: AuthRequest, res: Re
 // GET /api/notifications/unread-count
 export const getUnreadCount = async (req: AuthRequest, res: Response) => {
   try {
+    if (!req.user) {
+      res.status(401).json({ message: "Non authentifié" });
+      return;
+    }
     const query: any = { isRead: false };
     
     if (req.user.role === "admin") {
       query.recipientRole = "admin";
     } else {
-      query.recipientRole = "doctor";
+      query.recipientRole = req.user.role;
       query.recipientId = req.user._id;
     }
 

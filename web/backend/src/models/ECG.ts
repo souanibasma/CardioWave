@@ -15,6 +15,8 @@ export interface IECG {
   status?: EcgStatus;
   result?: string;
   condition?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 // ── Alias virtuels (séparés car non présents dans le schéma Mongoose) ──

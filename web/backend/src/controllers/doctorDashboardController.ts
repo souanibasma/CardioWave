@@ -41,23 +41,23 @@ export const getDoctorRecentECGs = async (req: Request, res: Response) => {
       .populate('patient', 'fullName prenom nom dateOfBirth phone');
 
     const formatted = ecgs.map(e => {
-        const patient: any = e.patient;
-        let age = null;
-        if (patient && patient.dateOfBirth) {
-            const birth = new Date(patient.dateOfBirth);
-            const now = new Date();
-            age = now.getFullYear() - birth.getFullYear();
-        }
-        
-        return {
-            id: e._id,
-            patient: patient ? (patient.fullName || `${patient.prenom} ${patient.nom}`) : 'Inconnu',
-            age: age,
-            date: e.createdAt ? new Date(e.createdAt).toLocaleDateString('fr-FR') : '--',
-            statut: e.status === 'Anormal' ? 'Anormal' : (e.status === 'Normal' ? 'Normal' : 'En attente'),
-            type: 'Repos 12 pistes', // default
-            urgent: e.urgent || false
-        };
+      const patient: any = e.patient;
+      let age = null;
+      if (patient && patient.dateOfBirth) {
+        const birth = new Date(patient.dateOfBirth);
+        const now = new Date();
+        age = now.getFullYear() - birth.getFullYear();
+      }
+
+      return {
+        id: e._id,
+        patient: patient ? (patient.fullName || `${patient.prenom} ${patient.nom}`) : 'Inconnu',
+        age: age,
+        date: e.createdAt ? new Date(e.createdAt).toLocaleDateString('fr-FR') : '--',
+        statut: e.status === 'Anormal' ? 'Anormal' : (e.status === 'Normal' ? 'Normal' : 'En attente'),
+        type: 'Repos 12 pistes', // default
+        urgent: e.urgent || false
+      };
     });
 
     res.json(formatted);
@@ -69,7 +69,7 @@ export const getDoctorRecentECGs = async (req: Request, res: Response) => {
 export const getDoctorDistributionChart = async (req: Request, res: Response) => {
   try {
     const doctorId = (req as any).user.id;
-    
+
     // 1. Trouver les ECGs de ce médecin
     const ecgs = await ECG.find({ doctor: doctorId }).select('_id');
     const ecgIds = ecgs.map(e => e._id);
