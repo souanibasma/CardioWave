@@ -1,361 +1,529 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MedecinLayout } from '../components/MedecinLayout';
-import { Card, CardContent } from '../components/ui/card';
+import { DashboardLayout } from '../components/DashboardLayout';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Heart, MessageCircle, Calendar, TrendingUp } from 'lucide-react';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import {
-  getArticles,
-  likeArticle,
-  addCommentToArticle,
-} from '../../services/api';
+  BookOpen,
+  Search,
+  Filter,
+  Bookmark,
+  ChevronRight,
+  Clock,
+  User,
+  ExternalLink,
+  Sparkles,
+  Heart,
+  Activity,
+  Brain,
+  History,
+  TrendingUp,
+  Stethoscope,
+} from 'lucide-react';
+import API from '../../services/api';
 
-type CommentItem = {
-  _id?: string;
-  content: string;
-  createdAt?: string;
-  author?: {
-    _id?: string;
-    fullName?: string;
-    email?: string;
-  };
-};
-
-type ArticleItem = {
+interface Article {
   _id: string;
-  title: string;
-  content: string;
-  category: string;
-  coverImage?: string;
-  author?: {
-    _id?: string;
-    fullName?: string;
-    email?: string;
-  };
-  isPublished: boolean;
-  likes: number;
-  comments: CommentItem[];
+  titre: string;
+  contenu: string;
+  categorie: string;
   createdAt: string;
-};
+  image?: string;
+  auteur?: string;
+  lectureMinutes?: number;
+}
+
+const PRIMARY = '#4f46e5';
+const PRIMARY_LIGHT = '#eef2ff';
+const TEXT = '#1e293b';
+const MUTED = '#64748b';
 
 export default function Articles() {
-  const [articles, setArticles] = useState<ArticleItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('Tous les articles');
+  const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
-  const [likedArticles, setLikedArticles] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
 
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        setLoading(true);
-        const data = await getArticles();
-        setArticles(data);
+        const res = await API.get('/articles');
+        // Filter out malformed records to prevent runtime crashes
+        setArticles((res.data || []).filter((a: any) => a && a._id));
       } catch (error) {
-        console.error("Erreur chargement articles :", error);
+        console.error('Erreur articles:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchArticles();
   }, []);
 
   const categories = useMemo(() => {
-    const unique = Array.from(new Set(articles.map((a) => a.category).filter(Boolean)));
-    return ['Tous les articles', ...unique];
+    const cats = articles.map((a) => a.categorie).filter(Boolean);
+    return ['Tous', ...Array.from(new Set(cats))];
   }, [articles]);
 
-  const filteredArticles = useMemo(() => {
-    if (selectedCategory === 'Tous les articles') return articles;
-    return articles.filter((article) => article.category === selectedCategory);
-  }, [articles, selectedCategory]);
+  const filtered = useMemo(() => {
+    return articles.filter((a) => {
+      const matchesSearch =
+        (a.titre || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (a.contenu || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCat = selectedCategory === 'Tous' || a.categorie === selectedCategory;
+      return matchesSearch && matchesCat;
+    });
+  }, [articles, searchTerm, selectedCategory]);
 
-  const handleLike = async (articleId: string) => {
-    // ✅ Si déjà liké, on ne fait rien
-    if (likedArticles.has(articleId)) return;
-
-    try {
-      const res = await likeArticle(articleId);
-      setArticles((prev) =>
-        prev.map((article) =>
-          article._id === articleId
-            ? { ...article, likes: res.likes }
-            : article
-        )
-      );
-      // ✅ Ajoute seulement, jamais retire
-      setLikedArticles((prev) => new Set(prev).add(articleId));
-    } catch (error) {
-      console.error("Erreur like article :", error);
-    }
-  };
-  const handleCommentChange = (articleId: string, value: string) => {
-    setCommentInputs((prev) => ({ ...prev, [articleId]: value }));
-  };
-
-  const handleAddComment = async (articleId: string) => {
-    const content = commentInputs[articleId]?.trim();
-    if (!content) return;
-    try {
-      const res = await addCommentToArticle(articleId, content);
-      setArticles((prev) =>
-        prev.map((article) =>
-          article._id === articleId
-            ? { ...article, comments: res.comments || [] }
-            : article
-        )
-      );
-      setCommentInputs((prev) => ({ ...prev, [articleId]: '' }));
-      setExpandedComments((prev) => ({ ...prev, [articleId]: true }));
-    } catch (error) {
-      console.error("Erreur ajout commentaire :", error);
-    }
-  };
-
-  const toggleComments = (articleId: string) => {
-    setExpandedComments((prev) => ({ ...prev, [articleId]: !prev[articleId] }));
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   };
 
   return (
-    <MedecinLayout>
-      <div className="p-8 space-y-8">
-        <div>
-          <h1
-            className="text-4xl mb-2"
-            style={{ fontFamily: 'var(--font-family-heading)', color: 'var(--text-primary)' }}
+    <DashboardLayout>
+      <div
+        style={{
+          minHeight: '100vh',
+          padding: 24,
+          background: '#f8fafc',
+          fontFamily:
+            "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          color: TEXT,
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            background: 'rgba(255,255,255,0.92)',
+            borderRadius: 34,
+            boxShadow: '0 40px 110px rgba(79,70,229,0.12)',
+            padding: 28,
+          }}
+        >
+          {/* HEADER */}
+          <div
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+
+              background:
+                'linear-gradient(135deg, #4f46e5 0%, #4338ca 45%, #3730a3 100%)',
+
+              borderRadius: 30,
+
+              padding: '38px 34px',
+
+              minHeight: 220,
+
+              color: 'white',
+
+              marginBottom: 30,
+
+              boxShadow:
+                '0 28px 80px rgba(79,70,229,0.22)',
+            }}
           >
-            Articles de Cardiologie
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-            Dernières publications et actualités médicales
-          </p>
-        </div>
+            {/* BG EFFECTS */}
+            <div
+              style={{
+                position: 'absolute',
+                top: -110,
+                right: -80,
 
-        {/* Filtres catégories */}
-        <div className="flex items-center gap-3 flex-wrap">
-          {categories.map((category) => (
-            <Button
-              key={category}
-              size="sm"
-              variant={selectedCategory === category ? 'default' : 'outline'}
-              onClick={() => setSelectedCategory(category)}
-              style={
-                selectedCategory === category
-                  ? { background: 'var(--primary)', color: 'white', borderRadius: '8px' }
-                  : { borderRadius: '8px', borderColor: 'var(--border-color)' }
-              }
+                width: 320,
+                height: 320,
+
+                borderRadius: '50%',
+
+                background:
+                  'radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 72%)',
+              }}
+            />
+
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -70,
+                left: -50,
+
+                width: 220,
+                height: 220,
+
+                borderRadius: '50%',
+
+                background:
+                  'radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 72%)',
+              }}
+            />
+
+            {/* ILLUSTRATION */}
+            <img
+              src="/pageArticle.png"
+              alt="Articles Illustration"
+
+              style={{
+                position: 'absolute',
+
+                right: 80,
+
+                top: '50%',
+
+                transform: 'translateY(-50%)',
+
+                width: 360, // ← AJUSTE ICI
+                height: 'auto',
+
+                objectFit: 'contain',
+
+                pointerEvents: 'none',
+
+                zIndex: 1,
+
+                opacity: 0.98,
+
+                filter:
+                  'drop-shadow(0 30px 50px rgba(0,0,0,0.20))',
+              }}
+            />
+
+            {/* CONTENT */}
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 2,
+
+                maxWidth: 760,
+              }}
             >
-              {category}
-            </Button>
-          ))}
-        </div>
+              <h1
+                style={{
+                  margin: 0,
 
-        {loading && (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-            Chargement des articles...
-          </p>
-        )}
+                  fontSize: 46,
 
-        {!loading && filteredArticles.length === 0 && (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-            Aucun article disponible.
-          </p>
-        )}
+                  fontWeight: 950,
 
-        {!loading && filteredArticles.length > 0 && (
-          <div className="grid grid-cols-2 gap-6">
-            {filteredArticles.map((article) => {
-              const articleDate = new Date(article.createdAt).toLocaleDateString('fr-FR', {
-                day: '2-digit', month: 'long', year: 'numeric',
-              });
-              const trending  = article.likes >= 100;
-              const isExpanded = expandedComments[article._id];
-              const isLiked    = likedArticles.has(article._id);
+                  letterSpacing: '-1.5px',
 
-              return (
-                <Card
-                  key={article._id}
-                  className="border-0 shadow-sm hover:shadow-md transition-all overflow-hidden group"
+                  lineHeight: 1.02,
+                }}
+              >
+                Articles 
+              </h1>
+
+              <p
+                style={{
+                  margin: '18px 0 0',
+
+                  maxWidth: 620,
+
+                  color: 'rgba(255,255,255,0.82)',
+
+                  fontSize: 16,
+
+                  lineHeight: 1.8,
+
+                  fontWeight: 500,
+                }}
+              >
+                Découvrez les dernières avancées en cardiologie,
+                les guides de lecture ECG et l'utilisation clinique de l'IA.
+              </p>
+            </div>
+          </div>
+
+          {/* FILTERS & SEARCH */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 16,
+              marginBottom: 30,
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                height: 58,
+                background: '#FFFFFF',
+                borderRadius: 20,
+                border: '1px solid #f1f5f9',
+                boxShadow: '0 12px 30px rgba(79,70,229,0.04)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 20px',
+                gap: 14,
+              }}
+            >
+              <Search size={20} color={PRIMARY} />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Rechercher un article, un guide..."
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  width: '100%',
+                  color: TEXT,
+                  fontSize: 14,
+                  fontWeight: 650,
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                padding: 6,
+                background: '#FFFFFF',
+                borderRadius: 20,
+                border: '1px solid #f1f5f9',
+                boxShadow: '0 12px 30px rgba(79,70,229,0.04)',
+              }}
+            >
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
                   style={{
-                    borderRadius: '16px',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border-color)',
+                    padding: '10px 20px',
+                    borderRadius: 14,
+                    border: 'none',
+                    background: selectedCategory === cat ? PRIMARY : 'transparent',
+                    color: selectedCategory === cat ? 'white' : MUTED,
+                    fontSize: 13,
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    transition: '0.2s ease',
                   }}
                 >
-                  {/* Image */}
-                  <div className="relative overflow-hidden" style={{ height: '240px' }}>
-                    <ImageWithFallback
-                      src={article.coverImage || 'https://via.placeholder.com/800x400?text=Article'}
-                      alt={article.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    {trending && (
-                      <div
-                        className="absolute top-4 right-4 px-3 py-1.5 rounded-lg flex items-center gap-1.5"
-                        style={{ background: 'rgba(0, 198, 162, 0.95)', backdropFilter: 'blur(10px)' }}
-                      >
-                        <TrendingUp className="w-3.5 h-3.5 text-white" />
-                        <span className="text-xs font-medium text-white">Tendance</span>
-                      </div>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ARTICLES GRID */}
+          {loading ? (
+            <div
+              style={{
+                height: 300,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: PRIMARY,
+                fontWeight: 900,
+              }}
+            >
+              <Activity className="animate-spin mr-2" />
+              Chargement de la bibliothèque...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div
+              style={{
+                background: '#FFFFFF',
+                borderRadius: 26,
+                padding: 60,
+                textAlign: 'center',
+                boxShadow: '0 16px 42px rgba(79,70,229,0.07)',
+              }}
+            >
+              <BookOpen size={48} color={PRIMARY} style={{ margin: '0 auto 16px' }} />
+              <h2 style={{ fontSize: 20, fontWeight: 950, color: TEXT }}>Aucun article trouvé</h2>
+              <p style={{ color: MUTED, fontWeight: 600, marginTop: 8 }}>
+                Essayez d'autres mots clés ou une autre catégorie.
+              </p>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                gap: 26,
+              }}
+            >
+              {filtered.map((a) => (
+                <div
+                  key={a._id}
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: 26,
+                    overflow: 'hidden',
+                    boxShadow: '0 16px 42px rgba(79,70,229,0.06)',
+                    border: '1px solid #f1f5f9',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    transition: 'transform 0.2s ease',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  {/* IMAGE */}
+                  <div
+                    style={{
+                      height: 200,
+                      background: `linear-gradient(135deg, ${PRIMARY_LIGHT} 0%, #f1f5f9 100%)`,
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {a.image ? (
+                      <img
+                        src={a.image}
+                        alt={a.titre}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <Activity size={40} color={PRIMARY} style={{ opacity: 0.3 }} />
                     )}
+
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 16,
+                        left: 16,
+                      }}
+                    >
+                      <Badge
+                        style={{
+                          background: 'rgba(255,255,255,0.95)',
+                          color: PRIMARY,
+                          border: 'none',
+                          borderRadius: 10,
+                          fontSize: 10,
+                          fontWeight: 900,
+                          padding: '6px 12px',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
+                        }}
+                      >
+                        {(a.categorie || '').toUpperCase()}
+                      </Badge>
+                    </div>
                   </div>
 
-                  <CardContent className="p-6">
-                    <Badge
-                      className="mb-3"
+                  {/* CONTENT */}
+                  <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div
                       style={{
-                        background: '#EEF2FF',
-                        color: 'var(--primary)',
-                        borderRadius: '6px',
-                        border: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        marginBottom: 12,
+                        color: MUTED,
+                        fontSize: 11,
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
                       }}
                     >
-                      {article.category}
-                    </Badge>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Clock size={14} />
+                        {a.lectureMinutes || 5} MIN
+                      </span>
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#cbd5e1' }} />
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <History size={14} />
+                        {formatDate(a.createdAt)}
+                      </span>
+                    </div>
 
                     <h3
-                      className="text-xl mb-3 line-clamp-2"
                       style={{
-                        fontFamily: 'var(--font-family-heading)',
-                        color: 'var(--text-primary)',
-                        lineHeight: '1.4',
+                        margin: 0,
+                        fontSize: 18,
+                        fontWeight: 950,
+                        color: TEXT,
+                        lineHeight: 1.4,
+                        marginBottom: 12,
                       }}
                     >
-                      {article.title}
+                      {a.titre}
                     </h3>
 
                     <p
-                      className="mb-4 line-clamp-3"
                       style={{
-                        color: 'var(--text-secondary)',
-                        fontSize: '14px',
-                        lineHeight: '1.6',
+                        margin: 0,
+                        fontSize: 14,
+                        lineHeight: 1.6,
+                        color: '#475569',
+                        fontWeight: 500,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        marginBottom: 20,
                       }}
                     >
-                      {article.content}
+                      {a.contenu}
                     </p>
 
-                    {/* Footer */}
                     <div
-                      className="flex items-center justify-between pt-4 border-t"
-                      style={{ borderColor: 'var(--border-color)' }}
+                      style={{
+                        marginTop: 'auto',
+                        paddingTop: 20,
+                        borderTop: '1px solid #f1f5f9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
                     >
-                      <div className="flex items-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        <Calendar className="w-4 h-4" />
-                        <span>{articleDate}</span>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        {/* Like button */}
-                        <button
-                          onClick={() => handleLike(article._id)}
-                          className="flex items-center gap-1.5 transition-colors"
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div
                           style={{
-                            color: isLiked ? '#E11D48' : 'var(--text-secondary)',
-                            transition: 'color 0.2s',
+                            width: 32,
+                            height: 32,
+                            borderRadius: '50%',
+                            background: PRIMARY_LIGHT,
+                            color: PRIMARY,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 12,
+                            fontWeight: 950,
                           }}
                         >
-                          <Heart
-                            className="w-4 h-4"
-                            fill={isLiked ? '#E11D48' : 'none'}
-                            stroke={isLiked ? '#E11D48' : 'currentColor'}
-                            style={{ transition: 'fill 0.2s, stroke 0.2s' }}
-                          />
-                          <span className="text-sm font-medium">{article.likes}</span>
-                        </button>
-
-                        {/* Commentaires toggle */}
-                        <button
-                          onClick={() => toggleComments(article._id)}
-                          className="flex items-center gap-1.5"
-                          style={{ color: 'var(--text-secondary)' }}
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                          <span className="text-sm font-medium">{article.comments?.length || 0}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Auteur */}
-                    <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-color)' }}>
-                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        Par{' '}
-                        <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                          {article.author?.fullName || 'Auteur inconnu'}
+                          {(a.auteur || 'CardioWave').charAt(0)}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 750, color: TEXT }}>
+                          {a.auteur || 'CardioWave'}
                         </span>
-                      </p>
-                    </div>
-
-                    {/* Section commentaires */}
-                    {isExpanded && (
-                      <div className="mt-5 pt-4 border-t space-y-4" style={{ borderColor: 'var(--border-color)' }}>
-                        <div className="space-y-3 max-h-60 overflow-auto">
-                          {article.comments?.length === 0 ? (
-                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                              Aucun commentaire pour le moment.
-                            </p>
-                          ) : (
-                            article.comments.map((comment) => (
-                              <div
-                                key={comment._id}
-                                className="p-3 rounded-xl"
-                                style={{
-                                  background: 'var(--background)',
-                                  border: '1px solid var(--border-color)',
-                                }}
-                              >
-                                <p className="text-sm mb-1" style={{ color: 'var(--text-primary)' }}>
-                                  {comment.content}
-                                </p>
-                                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                                  {comment.author?.fullName || 'Utilisateur'} •{' '}
-                                  {comment.createdAt
-                                    ? new Date(comment.createdAt).toLocaleString('fr-FR')
-                                    : ''}
-                                </p>
-                              </div>
-                            ))
-                          )}
-                        </div>
-
-                        {/* Input nouveau commentaire */}
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="Ajouter un commentaire..."
-                            value={commentInputs[article._id] || ''}
-                            onChange={(e) => handleCommentChange(article._id, e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleAddComment(article._id)}
-                            className="flex-1 px-3 py-2 rounded-lg border text-sm outline-none"
-                            style={{
-                              borderColor: 'var(--border-color)',
-                              background: 'var(--surface)',
-                              color: 'var(--text-primary)',
-                            }}
-                          />
-                          <Button
-                            onClick={() => handleAddComment(article._id)}
-                            style={{
-                              borderRadius: '8px',
-                              background: 'var(--primary)',
-                              color: 'white',
-                            }}
-                          >
-                            Commenter
-                          </Button>
-                        </div>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+
+                      <button
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          color: PRIMARY,
+                          fontSize: 13,
+                          fontWeight: 950,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Lire plus
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </MedecinLayout>
+    </DashboardLayout>
   );
 }

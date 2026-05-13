@@ -1,4 +1,4 @@
-import { MedecinLayout } from '../components/MedecinLayout';
+import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -176,7 +176,7 @@ export default function ListePatients() {
   });
 
   return (
-    <MedecinLayout>
+    <DashboardLayout>
       <div className="p-8 space-y-6">
 
         {/* Header */}
@@ -468,6 +468,6 @@ export default function ListePatients() {
           })}
         </div>
       </div>
-    </MedecinLayout>
+    </DashboardLayout>
   );
 }

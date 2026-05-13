@@ -409,4 +409,54 @@ export const createPatient = async (req: AuthRequest, res: Response): Promise<vo
     console.error("createPatient error:", error);
     res.status(500).json({ message: "Erreur lors de la création du patient" });
   }
+};
+
+/**
+ * GET /api/doctor/patients/:id
+ * Récupère les détails complets d'un patient spécifique
+ */
+export const getPatientDetails = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const doctorId = req.user._id;
+
+    const patient = await User.findOne({
+      _id: id,
+      role: "patient",
+      assignedDoctor: doctorId
+    }).select("-password").lean();
+
+    if (!patient) {
+      res.status(404).json({ message: "Patient introuvable ou non assigné" });
+      return;
+    }
+
+    const ecgs = await ECG.find({ patient: id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Calcul de l'âge
+    let age = null;
+    if (patient.dateOfBirth) {
+      const diff = Date.now() - new Date(patient.dateOfBirth).getTime();
+      age = new Date(diff).getUTCFullYear() - 1970;
+    }
+
+    res.status(200).json({
+      ...patient,
+      age: age || "N/A",
+      ecgs: ecgs.map((e: any) => ({
+        id: e._id,
+        title: e.title || "ECG sans titre",
+        date: e.createdAt,
+        result: e.result || "En attente",
+        condition: e.condition || "N/A",
+        status: e.status,
+        urgent: e.urgent
+      }))
+    });
+  } catch (error) {
+    console.error("getPatientDetails error:", error);
+    res.status(500).json({ message: "Erreur lors de la récupération des détails du patient" });
+  }
 };

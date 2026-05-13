@@ -8,6 +8,7 @@ import {
   getDoctorRecentPatients,
   getDoctorRecentAnalyses,
   getMyPatients,
+  getPatientDetails,
   createPatient,
 } from "../controllers/doctorController";
 
@@ -67,6 +68,7 @@ router.get(
 );
 
 router.get("/my-patients", getMyPatients);
+router.get("/patients/:id", getPatientDetails);
 router.post("/patients", createPatient);
 
 export default router;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import AdminLayout from "./AdminLayout";
+import { DashboardLayout } from "../components/DashboardLayout";
 import { getDoctors, approveDoctor, rejectDoctor } from "../../services/api";
 
 const CSS = `
@@ -172,10 +172,10 @@ export default function AdminVerification() {
   const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       <style>{CSS}</style>
 
-      <div style={{ padding: '2rem 2.5rem' }}>
+      <div style={{ padding: 24 }}>
 
         {/* Header */}
         <div className="vrf-fade vrf-fade-1" style={{ marginBottom: '1.75rem' }}>
@@ -441,6 +441,6 @@ export default function AdminVerification() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

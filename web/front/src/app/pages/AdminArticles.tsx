@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import AdminLayout from "./AdminLayout";
+import { DashboardLayout } from "../components/DashboardLayout";
 import API from "../../services/api";
 
 const CSS = `
@@ -463,10 +463,10 @@ export default function AdminArticles() {
   };
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       <style>{CSS}</style>
 
-      <div style={{ padding: "2rem 2.5rem" }}>
+      <div style={{ padding: 24, width: '100%' }}>
         <div
           className="adm-fade"
           style={{
@@ -1297,6 +1297,6 @@ export default function AdminArticles() {
           </div>
         </>
       )}
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

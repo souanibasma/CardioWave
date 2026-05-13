@@ -1,11 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   getPatientProfile,
   getPatientECGs,
   getPatientECGStats,
 } from "../../services/api";
+import {
+  Activity,
+  LogOut,
+  User,
+  Clock,
+  HeartPulse,
+  CheckCircle2,
+  AlertTriangle,
+  Send,
+} from "lucide-react";
 
 type PatientProfile = {
   _id: string;
@@ -45,70 +55,13 @@ type ECGStats = {
   urgent: number;
 };
 
-const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
-
-  @keyframes fadeup {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes ecg-line {
-    from { stroke-dashoffset: 400; }
-    to   { stroke-dashoffset: 0; }
-  }
-  @keyframes pulse-dot {
-    0%,100% { opacity: 1; transform: scale(1); }
-    50%     { opacity: 0.6; transform: scale(1.4); }
-  }
-
-  .cw-fade   { animation: fadeup 0.5s ease both; }
-  .cw-fade-1 { animation-delay: 0.05s; }
-  .cw-fade-2 { animation-delay: 0.13s; }
-  .cw-fade-3 { animation-delay: 0.21s; }
-
-  .ecg-path {
-    stroke-dasharray: 400;
-    stroke-dashoffset: 400;
-    animation: ecg-line 2s ease forwards;
-    animation-delay: 0.4s;
-  }
-  .live-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
-
-  .send-btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 14px 32px;
-    background: #fff;
-    color: #0D47A1; border: none; border-radius: 50px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 1rem; font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.18);
-    transition: transform 0.15s, box-shadow 0.15s;
-    white-space: nowrap;
-  }
-  .send-btn:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.22);
-  }
-  .send-btn:active { transform: scale(0.97); }
-
-  .ecg-row {
-    transition: background 0.15s, transform 0.12s;
-    cursor: default;
-  }
-  .ecg-row:hover {
-    background: #EEF4FF !important;
-    transform: translateX(4px);
-  }
-
-  .stat-card {
-    transition: transform 0.15s, box-shadow 0.15s;
-  }
-  .stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(21,101,192,0.13) !important;
-  }
-`;
+const PRIMARY = "#2920A7";
+const PRIMARY_LIGHT = "#F2F1FF";
+const TEXT = "#11142D";
+const MUTED = "#8A8EA6";
+const DANGER = "#D3214C";
+const SUCCESS = "#0F8A5F";
+const AMBER = "#B77900";
 
 function formatDate(dateString: string) {
   const date = new Date(dateString);
@@ -135,8 +88,7 @@ export default function Patient() {
   const [error, setError] = useState("");
 
   const heure = new Date().getHours();
-  const salut =
-    heure < 12 ? "Bonjour" : heure < 18 ? "Bon après-midi" : "Bonsoir";
+  const salut = heure < 12 ? "Bonjour" : heure < 18 ? "Bon après-midi" : "Bonsoir";
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -183,11 +135,14 @@ export default function Patient() {
       <div
         style={{
           minHeight: "100vh",
-          background: "#EEF4FF",
+          padding: 32,
+          background:
+            "radial-gradient(circle at top left, #F2F1FF 0, #ECEBFF 34%, #F8F9FF 68%, #FFFFFF 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontFamily: "'DM Sans', sans-serif",
+          color: PRIMARY,
+          fontWeight: 900,
         }}
       >
         Chargement...
@@ -199,335 +154,343 @@ export default function Patient() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#EEF4FF",
-        fontFamily: "'DM Sans', sans-serif",
+        background:
+          "radial-gradient(circle at top left, #F2F1FF 0, #ECEBFF 34%, #F8F9FF 68%, #FFFFFF 100%)",
+        padding: 32,
+        fontFamily:
+          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        color: TEXT,
       }}
     >
-      <style>{CSS}</style>
-
-      <nav
+      <div
         style={{
-          background: "#fff",
-          borderBottom: "1px solid #E2EEFF",
-          padding: "0 2.5rem",
-          height: "64px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
-          boxShadow: "0 1px 10px rgba(21,101,192,0.07)",
+          maxWidth: 1220,
+          margin: "0 auto",
+          background: "rgba(255,255,255,0.92)",
+          borderRadius: 34,
+          boxShadow: "0 40px 110px rgba(41,32,167,0.16)",
+          padding: 28,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, #1565C0, #1E88E5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M22 12h-4l-3 9L9 3l-3 9H2"
-                stroke="#fff"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+        {/* TOP BAR */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 24,
+            padding: "16px 22px",
+            marginBottom: 24,
+            boxShadow: "0 14px 40px rgba(34,28,112,0.07)",
+            border: "1px solid #F0F0FA",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: 18,
+                background: PRIMARY_LIGHT,
+                color: PRIMARY,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Activity size={23} />
+            </div>
+
+            <div>
+              <p style={{ margin: 0, color: TEXT, fontSize: 17, fontWeight: 950 }}>
+                CardioWave
+              </p>
+              <p style={{ margin: "3px 0 0", color: MUTED, fontSize: 12, fontWeight: 700 }}>
+                Espace patient
+              </p>
+            </div>
           </div>
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: "1.1rem",
-              color: "#0D47A1",
-              fontFamily: "'Outfit', sans-serif",
-            }}
-          >
-            CardioWave
-          </span>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button
+              onClick={() => {
+                logout();
+                navigate("/connexion");
+              }}
+              style={{
+                height: 42,
+                border: "1px solid #ECECFA",
+                background: "#FFFFFF",
+                color: MUTED,
+                borderRadius: 16,
+                padding: "0 18px",
+                fontSize: 13,
+                fontWeight: 900,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <LogOut size={16} />
+              Déconnexion
+            </button>
+
+            <div
+              onClick={() => navigate("/patient/profil")}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 16,
+                background: "linear-gradient(135deg, #2920A7 0%, #7C73D6 100%)",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 950,
+                cursor: "pointer",
+              }}
+            >
+              {initiales || <User size={20} />}
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button
-            onClick={() => {
-              logout();
-              navigate("/connexion");
-            }}
-            style={{
-              background: "none",
-              border: "1.5px solid #E2EEFF",
-              borderRadius: "8px",
-              padding: "7px 16px",
-              color: "#5C85C5",
-              fontSize: "0.82rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Déconnexion
-          </button>
-          <div
-            onClick={() => navigate("/patient/profil")}
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #1565C0, #42A5F5)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-            }}
-          >
-            {initiales}
-          </div>
-        </div>
-      </nav>
-
-      <div style={{ padding: "1.75rem 2.5rem" }}>
         {error && (
           <div
             style={{
-              marginBottom: "1rem",
-              background: "#FFF0F0",
-              border: "1px solid #FFCDD2",
-              color: "#C62828",
-              padding: "12px 14px",
-              borderRadius: "12px",
+              marginBottom: 20,
+              background: "#FFF0F3",
+              color: DANGER,
+              borderRadius: 18,
+              padding: 16,
+              fontWeight: 800,
             }}
           >
             {error}
           </div>
         )}
 
+        {/* HERO + STATS */}
         <div
-          className="cw-fade cw-fade-1"
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 200px",
-            gap: "1.25rem",
-            marginBottom: "1.25rem",
-            alignItems: "stretch",
+            gridTemplateColumns: "1fr 260px",
+            gap: 22,
+            marginBottom: 24,
           }}
         >
           <div
             style={{
-              background:
-                "linear-gradient(135deg, #0A2F6E 0%, #1565C0 50%, #1E88E5 100%)",
-              borderRadius: "20px",
-              padding: "1.75rem 2rem",
               position: "relative",
               overflow: "hidden",
-              boxShadow: "0 8px 28px rgba(13,71,161,0.22)",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              minHeight: "180px",
+              background:
+                "linear-gradient(135deg, #4F46E5 0%, #5B4FE9 30%, #6C63FF 65%, #7A74FF 100%)",
+              borderRadius: 26,
+              padding: "28px 34px",
+              color: "white",
+              minHeight: 210,
+              boxShadow: "0 24px 60px rgba(91,79,233,0.28)",
             }}
           >
             <div
               style={{
                 position: "absolute",
-                top: -50,
-                right: -50,
-                width: 220,
-                height: 220,
+                top: -120,
+                right: -80,
+                width: 260,
+                height: 260,
                 borderRadius: "50%",
-                background: "rgba(255,255,255,0.05)",
+                background: "rgba(255,255,255,0.10)",
+                filter: "blur(4px)",
               }}
             />
+
             <div
               style={{
-                position: "absolute",
-                bottom: -20,
-                right: 120,
-                width: 130,
-                height: 130,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.04)",
+                position: "relative",
+                zIndex: 1,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                height: "100%",
               }}
-            />
-
-            <div style={{ position: "relative", zIndex: 1 }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  background: "rgba(255,255,255,0.15)",
-                  borderRadius: "20px",
-                  padding: "4px 12px",
-                  marginBottom: "14px",
-                }}
-              >
+            >
+              <div>
                 <div
-                  className="live-dot"
                   style={{
-                    width: 7,
-                    height: 7,
-                    borderRadius: "50%",
-                    background: "#69F0AE",
-                  }}
-                />
-                <span
-                  style={{
-                    color: "rgba(255,255,255,0.9)",
-                    fontSize: "0.75rem",
-                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    background: "rgba(255,255,255,0.14)",
+                    color: "rgba(255,255,255,0.92)",
+                    fontSize: 12,
+                    fontWeight: 900,
+                    marginBottom: 16,
                   }}
                 >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "#69F0AE",
+                    }}
+                  />
                   Espace patient actif
-                </span>
+                </div>
+
+                <h1
+                  style={{
+                    margin: 0,
+                    fontSize: 34,
+                    fontWeight: 950,
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {salut}, {nameParts.prenom || "Patient"}
+                </h1>
+
+                <p
+                  style={{
+                    margin: "12px 0 0",
+                    maxWidth: 560,
+                    color: "rgba(255,255,255,0.82)",
+                    fontSize: 14,
+                    lineHeight: 1.7,
+                    fontWeight: 650,
+                  }}
+                >
+                  Suivez vos ECG envoyés, consultez les résultats reçus et transmettez
+                  rapidement un nouveau tracé à votre médecin.
+                </p>
+
+                <button
+                  onClick={() => navigate("/patient/rechercher-medecin")}
+                  style={{
+                    marginTop: 22,
+                    height: 56,
+                    border: "none",
+                    borderRadius: 20,
+                    background: "#FFFFFF",
+                    color: PRIMARY,
+                    padding: "0 28px",
+                    fontSize: 14,
+                    fontWeight: 950,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    boxShadow: "0 16px 35px rgba(0,0,0,0.18)",
+                  }}
+                >
+                  <Send size={18} />
+                  Envoyer un ECG
+                </button>
               </div>
 
-              <h1
+              <img
+                src="/ecg.png"
+                alt="ECG"
                 style={{
-                  margin: 0,
-                  color: "#fff",
-                  fontFamily: "'Outfit', sans-serif",
-                  fontSize: "1.9rem",
-                  fontWeight: 800,
-                  lineHeight: 1.2,
+                  width: 210,
+                  height: 210,
+                  objectFit: "contain",
+                  marginRight: -8,
+                  marginTop: -24,
+                  marginBottom: -24,
+                  filter: "drop-shadow(0 18px 40px rgba(0,0,0,0.18))",
+                  flexShrink: 0,
                 }}
-              >
-                {salut}, {nameParts.prenom || "Patient"} 👋
-              </h1>
-
-              <p
-                style={{
-                  margin: "8px 0 0",
-                  color: "rgba(255,255,255,0.70)",
-                  fontSize: "0.88rem",
-                }}
-              >
-                Bienvenue sur votre espace CardioWave
-              </p>
-            </div>
-
-            <div style={{ position: "absolute", bottom: 0, right: 0, zIndex: 1 }}>
-              <svg width="260" height="80" viewBox="0 0 260 80" fill="none">
-                <path
-                  className="ecg-path"
-                  d="M0 55 L40 55 L55 55 L68 10 L80 72 L92 30 L104 55 L140 55 L155 55 L168 12 L180 68 L192 35 L204 55 L260 55"
-                  stroke="rgba(255,255,255,0.22)"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              </svg>
-            </div>
-
-            <div style={{ position: "relative", zIndex: 1, marginTop: "1.5rem" }}>
-              <button
-                className="send-btn"
-                onClick={() => navigate("/patient/rechercher-medecin")}
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-                  <path
-                    d="M22 12h-4l-3 9L9 3l-3 9H2"
-                    stroke="#fff"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                Envoyer un ECG à un médecin
-              </button>
+              />
             </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div style={{ display: "grid", gap: 14 }}>
             {[
               {
                 label: "ECG envoyés",
                 value: stats.total,
-                sub: "transmissions",
-                color: "#0D47A1",
+                bg: PRIMARY_LIGHT,
+                color: PRIMARY,
+                icon: <HeartPulse size={21} />,
               },
               {
                 label: "Analysés",
                 value: stats.analysed,
-                sub: "résultats reçus",
-                color: "#2E7D32",
+                bg: "#E9F9F2",
+                color: SUCCESS,
+                icon: <CheckCircle2 size={21} />,
               },
               {
                 label: "En attente",
                 value: stats.pending,
-                sub: "en cours",
-                color: "#F57F17",
+                bg: "#FFF7E6",
+                color: AMBER,
+                icon: <Clock size={21} />,
               },
             ].map((s) => (
               <div
                 key={s.label}
-                className="stat-card"
                 style={{
-                  background: "#fff",
-                  borderRadius: "16px",
-                  padding: "1rem 1.25rem",
-                  boxShadow: "0 2px 10px rgba(21,101,192,0.07)",
-                  flex: 1,
+                  background: s.bg,
+                  borderRadius: 22,
+                  padding: 16,
+                  minHeight: 88,
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                  borderLeft: `4px solid ${s.color}`,
+                  alignItems: "center",
+                  gap: 14,
+                  border: "1px solid rgba(226,226,243,0.8)",
+                  boxShadow: "0 14px 34px rgba(34,28,112,0.07)",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "0.72rem",
-                    color: "#90A4AE",
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    marginBottom: "6px",
-                  }}
-                >
-                  {s.label}
-                </div>
-                <div
-                  style={{
-                    fontSize: "2rem",
-                    fontWeight: 800,
+                    width: 46,
+                    height: 46,
+                    borderRadius: 18,
+                    background: "rgba(255,255,255,0.68)",
                     color: s.color,
-                    fontFamily: "'Outfit', sans-serif",
-                    lineHeight: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  {s.value}
+                  {s.icon}
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "#B0BEC5",
-                    marginTop: "3px",
-                  }}
-                >
-                  {s.sub}
+
+                <div>
+                  <p style={{ margin: 0, color: s.color, fontSize: 13, fontWeight: 900 }}>
+                    {s.label}
+                  </p>
+                  <p
+                    style={{
+                      margin: "5px 0 0",
+                      color: s.color,
+                      fontSize: 28,
+                      fontWeight: 950,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {s.value}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
+        {/* HISTORY */}
         <div
-          className="cw-fade cw-fade-3"
           style={{
-            background: "#fff",
-            borderRadius: "20px",
-            padding: "1.5rem 1.75rem",
-            boxShadow: "0 2px 16px rgba(21,101,192,0.07)",
+            background: "#FFFFFF",
+            borderRadius: 26,
+            padding: 24,
+            boxShadow: "0 18px 45px rgba(34,28,112,0.08)",
+            border: "1px solid #EEEEFA",
           }}
         >
           <div
@@ -535,55 +498,42 @@ export default function Patient() {
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              marginBottom: "1.25rem",
+              marginBottom: 20,
             }}
           >
             <div>
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: "1.1rem",
-                  fontWeight: 700,
-                  color: "#0D47A1",
-                  fontFamily: "'Outfit', sans-serif",
-                }}
-              >
+              <h2 style={{ margin: 0, color: TEXT, fontSize: 22, fontWeight: 950 }}>
                 Historique ECG
               </h2>
-              <p
-                style={{
-                  margin: "3px 0 0",
-                  fontSize: "0.8rem",
-                  color: "#90A4AE",
-                }}
-              >
+              <p style={{ margin: "5px 0 0", color: MUTED, fontSize: 13, fontWeight: 700 }}>
                 {stats.total} transmissions au total
               </p>
             </div>
+
             <span
               style={{
-                background: "#EEF4FF",
-                borderRadius: "10px",
-                padding: "6px 14px",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                color: "#1565C0",
+                background: PRIMARY_LIGHT,
+                color: PRIMARY,
+                borderRadius: 999,
+                padding: "8px 16px",
+                fontSize: 13,
+                fontWeight: 950,
               }}
             >
               {new Date().getFullYear()}
             </span>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div style={{ display: "grid", gap: 12 }}>
             {ecgHistorique.length === 0 ? (
               <div
                 style={{
-                  padding: "18px",
-                  borderRadius: "14px",
-                  background: "#FAFCFF",
-                  border: "1px solid #E8F0FE",
-                  color: "#90A4AE",
-                  fontSize: "0.9rem",
+                  padding: 26,
+                  borderRadius: 20,
+                  background: "#FAFAFF",
+                  color: MUTED,
+                  fontWeight: 700,
+                  textAlign: "center",
                 }}
               >
                 Aucun ECG envoyé pour le moment.
@@ -592,118 +542,77 @@ export default function Patient() {
               ecgHistorique.map((ecg) => (
                 <div
                   key={ecg._id}
-                  className="ecg-row"
                   style={{
+                    background: "#FAFAFF",
+                    border: "1px solid #F1F1FA",
+                    borderRadius: 20,
+                    padding: 16,
                     display: "flex",
                     alignItems: "center",
-                    gap: "14px",
-                    padding: "14px 16px",
-                    borderRadius: "14px",
-                    background: "#FAFCFF",
-                    border: "1px solid #E8F0FE",
+                    gap: 14,
                   }}
                 >
                   <div
                     style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: "12px",
-                      flexShrink: 0,
-                      background:
-                        ecg.urgency === "urgente" ? "#FFF0F0" : "#EEF4FF",
+                      width: 48,
+                      height: 48,
+                      borderRadius: 18,
+                      background: ecg.urgency === "urgente" ? "#FFF0F3" : PRIMARY_LIGHT,
+                      color: ecg.urgency === "urgente" ? DANGER : PRIMARY,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      border: `1.5px solid ${
-                        ecg.urgency === "urgente" ? "#FFCDD2" : "#DBEAFE"
-                      }`,
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M22 12h-4l-3 9L9 3l-3 9H2"
-                        stroke={
-                          ecg.urgency === "urgente" ? "#E53935" : "#1565C0"
-                        }
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: "#0D47A1",
-                        fontSize: "0.92rem",
-                      }}
-                    >
-                      {ecg.doctor?.fullName || "Médecin non assigné"}
-                    </div>
-                    <div
-                      style={{
-                        color: "#90A4AE",
-                        fontSize: "0.78rem",
-                        marginTop: "2px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "5px",
-                      }}
-                    >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none">
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke="#90A4AE"
-                          strokeWidth="2"
-                        />
-                        <path
-                          d="M12 7v5l3 3"
-                          stroke="#90A4AE"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      {formatDate(ecg.createdAt)} ·{" "}
-                      {ecg.doctor?.specialty || "Spécialité non renseignée"}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
                       flexShrink: 0,
                     }}
                   >
+                    {ecg.urgency === "urgente" ? (
+                      <AlertTriangle size={22} />
+                    ) : (
+                      <Activity size={22} />
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ margin: 0, color: TEXT, fontSize: 14, fontWeight: 950 }}>
+                      {ecg.doctor?.fullName || "Médecin non assigné"}
+                    </p>
+                    <p
+                      style={{
+                        margin: "4px 0 0",
+                        color: MUTED,
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatDate(ecg.createdAt)} ·{" "}
+                      {ecg.doctor?.specialty || "Spécialité non renseignée"}
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     {ecg.urgency === "urgente" && (
                       <span
                         style={{
-                          fontSize: "0.72rem",
-                          padding: "3px 9px",
-                          borderRadius: "20px",
-                          fontWeight: 700,
-                          background: "#FFEBEE",
-                          color: "#C62828",
+                          background: "#FFF0F3",
+                          color: DANGER,
+                          borderRadius: 999,
+                          padding: "6px 11px",
+                          fontSize: 11,
+                          fontWeight: 950,
                         }}
                       >
-                        ⚡ Urgent
+                        Urgent
                       </span>
                     )}
+
                     <span
                       style={{
-                        fontSize: "0.78rem",
-                        padding: "4px 14px",
-                        borderRadius: "20px",
-                        fontWeight: 700,
-                        background:
-                          ecg.status === "Analysé" ? "#E8F5E9" : "#FFFDE7",
-                        color:
-                          ecg.status === "Analysé" ? "#2E7D32" : "#F57F17",
+                        background: ecg.status === "Analysé" ? "#E9F9F2" : "#FFF7E6",
+                        color: ecg.status === "Analysé" ? SUCCESS : AMBER,
+                        borderRadius: 999,
+                        padding: "6px 13px",
+                        fontSize: 12,
+                        fontWeight: 950,
                       }}
                     >
                       {ecg.status}

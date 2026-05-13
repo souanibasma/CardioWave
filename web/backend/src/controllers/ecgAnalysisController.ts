@@ -275,6 +275,9 @@ export const analyzeECGWithAI = async (req: Request, res: Response) => {
 
     // 3. Construct aiResult for frontend (ECGAnalysis.tsx)
     const combinedResult = {
+      // Quality
+      quality: aiData.quality,
+
       // Metrics (source: Flask)
       heart_rate: flaskData.data?.intervals?.hr,
       pr_interval: flaskData.data?.intervals?.pr,
@@ -289,6 +292,10 @@ export const analyzeECGWithAI = async (req: Request, res: Response) => {
         anomalies: aiData.summary?.anomalies || [],
         n0: aiData.n0,
         n1: aiData.n1,
+        arr: aiData.arr,
+        beat: aiData.beat,
+        arr_detected: aiData.arr_detected,
+        beat_detected: aiData.beat_detected,
       },
 
       // Deterministic rules results (source: Flask)
@@ -297,6 +304,7 @@ export const analyzeECGWithAI = async (req: Request, res: Response) => {
         diagnosis: flaskData.data?.diagnosis,
         confidence: flaskData.data?.confidence,
         details: flaskData.data?.details,
+        raw_result: flaskData.raw_result, // Full pipeline steps 4-7
       }
     };
 
@@ -343,6 +351,28 @@ export const saveDoctorNotes = async (req: Request, res: Response) => {
     res.status(200).json(analysis);
   } catch (error: any) {
     console.error("saveDoctorNotes error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// f) deleteECGAnalysis
+export const deleteECGAnalysis = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if analysis exists
+    const analysis = await ECGAnalysis.findById(id);
+    if (!analysis) {
+       res.status(404).json({ message: "Analyse introuvable" });
+       return;
+    }
+
+    // Delete the analysis
+    await ECGAnalysis.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Analyse supprimée avec succès" });
+  } catch (error: any) {
+    console.error("deleteECGAnalysis error:", error);
     res.status(500).json({ message: error.message });
   }
 };

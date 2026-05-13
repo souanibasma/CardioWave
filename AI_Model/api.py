@@ -288,9 +288,9 @@ def run_pipeline(signal: np.ndarray, threshold: float = BINARY_THRESHOLD,
 
     # N1
     probs_n1 = preds_n1 = borderlines = None
-    if pred_0 == 1:
-        probs_n1, preds_n1, borderlines = predict_multiclass(
-            morph_t, rhythm_t, borderline_margin)
+    # N1 - Always run to provide full data transparency to the doctor
+    probs_n1, preds_n1, borderlines = predict_multiclass(
+        morph_t, rhythm_t, borderline_margin)
 
     # ARR + BEAT
     arr_model, arr_thr, beat_thr = get_arr_model()
@@ -333,7 +333,7 @@ def run_pipeline(signal: np.ndarray, threshold: float = BINARY_THRESHOLD,
                     "borderline":  n in (borderlines or {}).get("cd", []),
                 }
                 for n in CD_NAMES
-            } if pred_0 == 1 else {},
+            },
             "hyp": {
                 n: {
                     "probability": round(probs_n1["hyp"][n], 4),
@@ -342,7 +342,7 @@ def run_pipeline(signal: np.ndarray, threshold: float = BINARY_THRESHOLD,
                     "borderline":  n in (borderlines or {}).get("hyp", []),
                 }
                 for n in HYP_NAMES
-            } if pred_0 == 1 else {},
+            },
             "ihd": {
                 n: {
                     "probability": round(probs_n1["ihd"][n], 4),
@@ -351,12 +351,12 @@ def run_pipeline(signal: np.ndarray, threshold: float = BINARY_THRESHOLD,
                     "borderline":  n in (borderlines or {}).get("ihd", []),
                 }
                 for n in IHD_NAMES
-            } if pred_0 == 1 else {},
+            },
             "positives": {
-                "cd":  [n for n in CD_NAMES  if pred_0 == 1 and preds_n1["cd"][n]],
-                "hyp": [n for n in HYP_NAMES if pred_0 == 1 and preds_n1["hyp"][n]],
-                "ihd": [n for n in IHD_NAMES if pred_0 == 1 and preds_n1["ihd"][n]],
-            } if pred_0 == 1 else {"cd": [], "hyp": [], "ihd": []},
+                "cd":  [n for n in CD_NAMES  if preds_n1["cd"][n]],
+                "hyp": [n for n in HYP_NAMES if preds_n1["hyp"][n]],
+                "ihd": [n for n in IHD_NAMES if preds_n1["ihd"][n]],
+            },
         },
         "arr": {
             n: {

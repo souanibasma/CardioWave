@@ -23,7 +23,7 @@ async function debugData() {
         const statuses = analyses.map(a => a.aiResult?.ai_classification?.status);
         console.log('Unique statuses in DB:', [...new Set(statuses)]);
 
-        const counts = {};
+        const counts: Record<string, number> = {};
         statuses.forEach(s => {
             counts[s] = (counts[s] || 0) + 1;
         });

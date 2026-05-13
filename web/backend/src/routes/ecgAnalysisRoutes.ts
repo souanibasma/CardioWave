@@ -24,4 +24,7 @@ router.post("/:id/analyze", ecgAnalysisController.analyzeECGWithAI);
 // PATCH /api/ecg-analysis/:id/notes
 router.patch("/:id/notes", ecgAnalysisController.saveDoctorNotes);
 
+// DELETE /api/ecg-analysis/:id
+router.delete("/:id", protect, ecgAnalysisController.deleteECGAnalysis);
+
 export default router;

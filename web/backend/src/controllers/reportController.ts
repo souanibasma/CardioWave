@@ -351,7 +351,7 @@ function buildHTML(analysis: any, chatSummary?: string): string {
 export const generateReport = async (req: Request, res: Response) => {
   try {
     const { analysisId } = req.params;
-    const { chatSummary } = req.body; // résumé optionnel du chat
+    const { chatSummary } = req.body || {}; // Optionnel, éviter l'erreur si body est vide
 
     // 1. Récupérer l'analyse depuis MongoDB
     const analysis = await ECGAnalysis.findById(analysisId).populate({
@@ -373,25 +373,35 @@ export const generateReport = async (req: Request, res: Response) => {
     const html = buildHTML(analysis.toObject(), chatSummary);
 
     // 4. Lancer Puppeteer et générer le PDF
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    let browser;
+    let fileName = `ecg_${analysisId}_report.pdf`;
+    try {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+      });
 
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
+      const page = await browser.newPage();
+      // Augmenter le timeout à 60s pour les connexions lentes ou gros rapports
+      page.setDefaultNavigationTimeout(60000);
+      
+      await page.setContent(html, { waitUntil: "networkidle2" });
 
-    const fileName = `ecg_${analysisId}_report.pdf`;
-    const filePath = path.join(reportsDir, fileName);
+      const filePath = path.join(reportsDir, fileName);
 
-    await page.pdf({
-      path: filePath,
-      format: "A4",
-      margin: { top: "0px", bottom: "0px", left: "0px", right: "0px" },
-      printBackground: true,
-    });
+      await page.pdf({
+        path: filePath,
+        format: "A4",
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+        printBackground: true,
+      });
 
-    await browser.close();
+      await browser.close();
+    } catch (pdfError: any) {
+      if (browser) await browser.close();
+      console.error("[Puppeteer Error]:", pdfError);
+      throw new Error(`Échec Puppeteer : ${pdfError.message}`);
+    }
 
     // 5. Sauvegarder l'URL dans MongoDB
     const reportUrl = `/uploads/reports/${fileName}`;
@@ -402,7 +412,7 @@ export const generateReport = async (req: Request, res: Response) => {
       reportUrl: `http://localhost:5000${reportUrl}`,
     });
   } catch (error: any) {
-    console.error("[reportController] Error:", error);
+    console.error("[reportController] Final Error:", error);
     return res.status(500).json({
       message: "Erreur génération PDF",
       error: error.message,

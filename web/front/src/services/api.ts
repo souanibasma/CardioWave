@@ -403,6 +403,11 @@ export const getDoctorMyPatients = async () => {
   return res.data;
 };
 
+export const getDoctorPatientDetails = async (id: string) => {
+  const res = await API.get(`/doctor/patients/${id}`);
+  return res.data;
+};
+
 export const askMedicalChatbot = async (
   question: string,
   history: { question: string; answer: string }[] = []
@@ -418,6 +423,18 @@ export const askMedicalChatbot = async (
     answer: cleanAnswer(data.answer || ""),
     sources: extractSources(data.answer || ""),
   };
+};
+
+export const chatWithECG = async (
+  analysisId: string,
+  message: string,
+  history: { role: string; content: string }[] = []
+) => {
+  const response = await API.post(`/chat/${analysisId}`, {
+    message,
+    history,
+  });
+  return response.data;
 };
 /* =========================
    ECG ANALYSIS (CONTRACT)
@@ -461,6 +478,11 @@ export async function generateReport(id: string, chatSummary?: string) {
   return data;
 }
 
+export async function deleteECGAnalysis(id: string) {
+  const { data } = await API.delete(`/ecg-analysis/${id}`);
+  return data;
+}
+
 /**
  * Resolves image URLs based on source:
  * - http://localhost:8000/... → strip host prefix then re-add (normalize port)
@@ -501,35 +523,57 @@ export function getImageUrl(rawPath: string) {
   const normalizedPath = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
   return `http://localhost:5000${normalizedPath}`;
 }
-function extractSources(answer: string): string[] {
-  const sources: string[] = [];
+function extractSources(answer: string): { name: string; url: string }[] {
+  const sources: { name: string; url: string }[] = [];
   let foundSourceLine = false;
 
   for (const line of answer.split("\n")) {
-    const l = line.toLowerCase().trim();
-    if (l.startsWith("sources :") || l.startsWith("sources:")) {
+    const l = line.trim();
+    const lowerL = l.toLowerCase();
+    
+    if (lowerL.startsWith("sources :") || lowerL.startsWith("sources:")) {
       foundSourceLine = true;
-      const part = line
+      const part = l
         .split(":")
         .slice(1)
         .join(":")
         .replace(/[\[\]]/g, "")
         .trim();
 
+      if (!part) continue;
+
       part.split(",").forEach((s) => {
         const clean = s.trim();
-        if (clean && clean.length > 1) {
-          sources.push(clean);
+        if (!clean) return;
+
+        // Try to find a URL in the segment
+        const urlRegex = /(https?:\/\/[^\s\)]+)/;
+        const urlMatch = clean.match(urlRegex);
+
+        if (urlMatch) {
+          const url = urlMatch[1];
+          // Name is everything before the URL or the URL itself if no name
+          let name = clean.replace(url, "").replace(/[\(\)]/g, "").trim();
+          if (!name) {
+            // Extract domain as name if no name provided
+            try {
+              name = new URL(url).hostname.replace("www.", "");
+            } catch {
+              name = "Lien";
+            }
+          }
+          sources.push({ name, url });
+        } else if (clean.length > 2) {
+          sources.push({
+            name: clean,
+            url: `https://www.google.com/search?q=${encodeURIComponent(clean)}`
+          });
         }
       });
     }
   }
 
-  if (!foundSourceLine) {
-    return [];
-  }
-
-  return [...new Set(sources)];
+  return sources;
 }
 function cleanAnswer(answer: string): string {
   return answer

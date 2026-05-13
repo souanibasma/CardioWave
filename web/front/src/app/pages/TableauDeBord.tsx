@@ -1,44 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
-import { MedecinLayout } from '../components/MedecinLayout';
-import { useAuth } from '../context/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { Button } from '../components/ui/button';
-import { Activity, Clock, Eye, TrendingUp, TrendingDown } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
+import { DashboardLayout } from '../components/DashboardLayout';
+import { useAuth } from '../context/AuthContext';
 import {
   getDoctorDashboardOverview,
   getDoctorRecentECGs,
   getDoctorDistributionChart,
 } from '../../services/api';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend
-);
+const PRIMARY_COLOR = '#4f46e5';
+const PRIMARY_LIGHT = '#eef2ff';
 
-const PRIMARY = '#534AB7';
-const DANGER = '#E24B4A';
-const AMBER = '#EF9F27';
-const TEAL = '#1D9E75';
-const INDIGO = '#6366F1';
-const ROSE = '#F43F5E';
-const CYAN = '#06B6D4';
-const CHART_COLORS = [PRIMARY, DANGER, AMBER, TEAL, INDIGO, ROSE, CYAN];
+const CHART_COLORS = [
+  '#4f46e5',
+  '#f43f5e',
+  '#f59e0b',
+  '#14b8a6',
+  '#6366f1',
+];
 
 type Overview = {
   receivedToday: number;
@@ -60,27 +39,331 @@ type DistributionChart = {
   values: number[];
 };
 
-const LegendDot = ({ color, label }: { color: string; label: string }) => (
-  <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
-    <span className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: color }} />
-    {label}
-  </span>
-);
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<
+    string,
+    {
+      background: string;
+      color: string;
+    }
+  > = {
+    Normal: {
+      background: '#E9F9F2',
+      color: '#0F8A5F',
+    },
+
+    Anormal: {
+      background: '#FFF0F3',
+      color: '#D3214C',
+    },
+
+    'En attente': {
+      background: '#FFF7E6',
+      color: '#B77900',
+    },
+  };
+
+  const s = styles[status] || {
+    background: '#F4F6FB',
+    color: '#667085',
+  };
+
+  return (
+    <span
+      style={{
+        background: s.background,
+        color: s.color,
+        padding: '6px 12px',
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 900,
+        letterSpacing: 0.3,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {status.toUpperCase()}
+    </span>
+  );
+}
+
+function MiniCard({
+  title,
+  value,
+  color,
+  bg,
+}: {
+  title: string;
+  value: string | number;
+  color: string;
+  bg: string;
+}) {
+  return (
+    <div
+      style={{
+        borderRadius: 18,
+        background: bg,
+        padding: '14px 16px',
+        minHeight: 78,
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          color: '#767A90',
+          fontSize: 12,
+          fontWeight: 800,
+        }}
+      >
+        {title}
+      </p>
+
+      <p
+        style={{
+          margin: '8px 0 0',
+          color,
+          fontSize: 26,
+          fontWeight: 950,
+          letterSpacing: -1,
+        }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function KpiCircle({
+  value,
+  label,
+  color,
+}: {
+  value: string | number;
+  label: string;
+  color: string;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
+      <div
+        style={{
+          width: 74,
+          height: 74,
+          borderRadius: '50%',
+          background: `conic-gradient(${color} 0deg 260deg, rgba(255,255,255,0.18) 260deg 360deg)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: 'inset 0 0 0 7px rgba(255,255,255,0.07)',
+        }}
+      >
+        <div
+          style={{
+            width: 50,
+            height: 50,
+            borderRadius: '50%',
+            background: '#2920A7',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            fontWeight: 950,
+            fontSize: 14,
+          }}
+        >
+          {value}
+        </div>
+      </div>
+
+      <p
+        style={{
+          margin: 0,
+          color: 'rgba(255,255,255,0.86)',
+          fontSize: 11,
+          fontWeight: 800,
+          textAlign: 'center',
+        }}
+      >
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function DiagnosticsPieChart({
+  labels,
+  values,
+}: {
+  labels: string[];
+  values: number[];
+}) {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const cleanValues = values.map((v) => Number(v) || 0);
+
+  const sum = cleanValues.reduce((a, b) => a + b, 0);
+
+  let cumulative = 0;
+
+  const getCoordinates = (percent: number) => {
+    const angle = percent * 360 - 90;
+
+    const radians = (Math.PI * angle) / 180;
+
+    return {
+      x: 160 + 125 * Math.cos(radians),
+      y: 160 + 125 * Math.sin(radians),
+    };
+  };
+
+  const createPath = (value: number) => {
+    if (sum === 0) return '';
+
+    const startPercent = cumulative / sum;
+
+    const endPercent = (cumulative + value) / sum;
+
+    const start = getCoordinates(startPercent);
+
+    const end = getCoordinates(endPercent);
+
+    const largeArcFlag =
+      endPercent - startPercent > 0.5 ? 1 : 0;
+
+    cumulative += value;
+
+    return `
+      M 160 160
+      L ${start.x} ${start.y}
+      A 125 125 0 ${largeArcFlag} 1 ${end.x} ${end.y}
+      Z
+    `;
+  };
+
+  if (sum === 0) {
+    return (
+      <div
+        style={{
+          width: 320,
+          height: 260,
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#8A8EA6',
+          fontSize: 13,
+          fontWeight: 800,
+        }}
+      >
+        Aucune donnée disponible.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        width: 320,
+        height: 320,
+        margin: '0 auto',
+      }}
+    >
+      <svg width="320" height="320" viewBox="0 0 320 320">
+        {cleanValues.map((value, index) => (
+          <path
+            key={index}
+            d={createPath(value)}
+            fill={
+              CHART_COLORS[index % CHART_COLORS.length]
+            }
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            style={{
+              cursor: 'pointer',
+              transition:
+                'transform 0.2s ease, opacity 0.2s ease',
+              transform:
+                hoveredIndex === index
+                  ? 'scale(1.04)'
+                  : 'scale(1)',
+              transformOrigin: '160px 160px',
+              opacity:
+                hoveredIndex === null ||
+                hoveredIndex === index
+                  ? 1
+                  : 0.48,
+            }}
+          />
+        ))}
+
+        <circle cx="160" cy="160" r="78" fill="white" />
+      </svg>
+
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+        }}
+      >
+        <p
+          style={{
+            margin: 0,
+            fontSize: 30,
+            fontWeight: 950,
+            color: '#11142D',
+          }}
+        >
+          {sum}%
+        </p>
+
+        <p
+          style={{
+            margin: '4px 0 0',
+            fontSize: 12,
+            fontWeight: 800,
+            color: '#8A8EA6',
+          }}
+        >
+          TOTAL
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function TableauDeBord() {
   const { user } = useAuth();
 
-  const [overview, setOverview] = useState<Overview>({
-    receivedToday: 0,
-    pendingAnalyses: 0,
-  });
+  const [overview, setOverview] =
+    useState<Overview>({
+      receivedToday: 0,
+      pendingAnalyses: 0,
+    });
 
-  const [ecgRecents, setEcgRecents] = useState<RecentECG[]>([]);
-  const [distributionChart, setDistributionChart] = useState<DistributionChart>({
-    labels: [],
-    values: [],
-  });
+  const [ecgRecents, setEcgRecents] = useState<
+    RecentECG[]
+  >([]);
+
+  const [distributionChart, setDistributionChart] =
+    useState<DistributionChart>({
+      labels: [],
+      values: [],
+    });
+
   const [loading, setLoading] = useState(true);
+
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -98,10 +381,15 @@ export default function TableauDeBord() {
         ]);
 
         setOverview(overviewRes);
+
         setEcgRecents(recentRes);
+
         setDistributionChart(distributionRes);
       } catch (error) {
-        console.error('Erreur chargement dashboard médecin :', error);
+        console.error(
+          'Erreur chargement dashboard médecin :',
+          error
+        );
       } finally {
         setLoading(false);
       }
@@ -110,239 +398,617 @@ export default function TableauDeBord() {
     fetchDashboardData();
   }, []);
 
-  const today = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-
-  const statsCards = useMemo(() => [
+  const today = new Date().toLocaleDateString(
+    'fr-FR',
     {
-      title: "ECG reçus aujourd'hui",
-      value: String(overview.receivedToday),
-      icon: Activity,
-      trend: { value: '+0%', isPositive: true },
-      color: 'var(--primary)',
-      bgColor: '#EEF2FF',
-    },
-    {
-      title: 'Analyses en attente',
-      value: String(overview.pendingAnalyses),
-      icon: Clock,
-      trend: { value: '+0', isPositive: false },
-      color: '#F59E0B',
-      bgColor: '#FEF3C7',
-    },
-  ], [overview]);
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }
+  );
 
-  const doughnutData = useMemo(() => ({
-    labels: distributionChart.labels,
-    datasets: [
-      {
-        data: distributionChart.values,
-        backgroundColor: CHART_COLORS,
-        borderWidth: 0,
-        hoverOffset: 4,
-      },
-    ],
-  }), [distributionChart]);
+  const filteredEcgs = ecgRecents.filter((ecg) =>
+    ecg.patient
+      .toLowerCase()
+      .includes(query.toLowerCase())
+  );
 
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '68%',
-    plugins: { 
-        legend: { display: false },
-        tooltip: {
-            callbacks: {
-                label: (context: any) => ` ${context.label}: ${context.raw}%`
-            }
-        }
-    },
-  } as const;
+  const urgentCount = ecgRecents.filter(
+    (ecg) => ecg.urgent
+  ).length;
 
   return (
-    <MedecinLayout>
-      <div className="p-8 space-y-6">
-        <div className="flex justify-between items-end">
-            <div>
-            <h1
-                className="text-4xl mb-1"
-                style={{ fontFamily: 'var(--font-family-heading)', color: 'var(--text-primary)' }}
-            >
-                Bonjour Dr. {user?.prenom} 👋
-            </h1>
-            <p
-                style={{
-                color: 'var(--text-secondary)',
-                fontSize: '14px',
-                textTransform: 'capitalize',
-                }}
-            >
-                {today}
-            </p>
-            </div>
-            {loading && (
-            <div className="text-sm px-4 py-2 rounded-lg bg-gray-100 animate-pulse" style={{ color: 'var(--text-secondary)' }}>
-                Mise à jour...
-            </div>
-            )}
-        </div>
+    <DashboardLayout>
+      <div
+        style={{
+          minHeight: '100vh',
+          padding: 24,
+          background: '#f8fafc',
+          fontFamily:
+            "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          color: '#1e293b',
+        }}
+      >
+        <style>{`
+          @media (max-width: 1000px) {
+            .main-zone {
+              grid-template-columns: 1fr !important;
+            }
 
-        <div className="grid grid-cols-2 gap-6">
-          {statsCards.map((stat, index) => (
-            <Card
-              key={index}
-              style={{ borderRadius: '16px', background: 'var(--surface)', border: '1px solid var(--border-color)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: stat.bgColor }}
-                  >
-                    <stat.icon className="w-6 h-6" style={{ color: stat.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-3xl font-bold leading-none mb-1.5" style={{ color: 'var(--text-primary)' }}>
-                      {stat.value}
-                    </p>
-                    <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                      {stat.title}
-                    </p>
-                  </div>
-                  <div
-                    className="flex items-center gap-1 text-sm font-semibold px-2 py-1 rounded-full flex-shrink-0"
-                    style={{ 
-                        background: stat.trend.isPositive ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
-                        color: stat.trend.isPositive ? 'var(--success)' : '#F59E0B' 
+            .diagnostic-chart-zone {
+              grid-template-columns: 1fr !important;
+            }
+
+            .hero-illustration {
+              width: 180px !important;
+              right: 0px !important;
+              bottom: -5px !important;
+              opacity: 0.18 !important;
+            }
+          }
+
+          .ecg-line:hover {
+            background: #F7F7FF;
+            transform: translateY(-1px);
+          }
+        `}</style>
+
+        <div
+          style={{
+            width: '100%',
+            padding: '18px 22px',
+            background: 'transparent',
+          }}
+        >
+          <div
+            className="main-zone"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1.5fr 0.8fr',
+              gap: 24,
+            }}
+          >
+            {/* LEFT */}
+            <section>
+              {/* HERO */}
+              <div
+                style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  background:
+                    'linear-gradient(135deg, #4f46e5 0%, #4338ca 45%, #3730a3 100%)',
+                  borderRadius: 30,
+                  padding: '30px 34px',
+                  marginBottom: 24,
+                  minHeight: 150,
+                  boxShadow:
+                    '0 28px 80px rgba(79,70,229,0.22)',
+                }}
+              >
+                {/* BG EFFECT */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -120,
+                    right: -80,
+                    width: 320,
+                    height: 320,
+                    background:
+                      'radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 72%)',
+                  }}
+                />
+
+                {/* DATE */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 26,
+                    right: 26,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background:
+                      'rgba(255,255,255,0.10)',
+                    border:
+                      '1px solid rgba(255,255,255,0.08)',
+                    padding: '10px 16px',
+                    borderRadius: 999,
+                    backdropFilter: 'blur(6px)',
+                    zIndex: 5,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      background:
+                        'rgba(255,255,255,0.16)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                      color: 'white',
                     }}
                   >
-                    {stat.trend.isPositive ? (
-                      <TrendingUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <TrendingDown className="w-3.5 h-3.5" />
-                    )}
-                    {stat.trend.value}
+                    ◷
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 900,
+                      color:
+                        'rgba(255,255,255,0.95)',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {today}
+                  </span>
+                </div>
+
+                {/* ILLUSTRATION */}
+                <img
+                  src="/pageTableaudebord.png"
+                  alt="Dashboard Illustration"
+                  className="hero-illustration"
+                  style={{
+                    position: 'absolute',
+                    right: 18,
+                    bottom: -25,
+                    width: 280,
+                    objectFit: 'contain',
+                    zIndex: 1,
+                    pointerEvents: 'none',
+                    filter:
+                      'drop-shadow(0 18px 40px rgba(0,0,0,0.18))',
+                  }}
+                />
+
+                {/* TEXT */}
+                <div
+                  style={{
+                    position: 'relative',
+                    zIndex: 3,
+                    maxWidth: 520,
+                  }}
+                >
+                  <h1
+                    style={{
+                      margin: 0,
+                      fontSize: 28,
+                      fontWeight: 950,
+                      letterSpacing: -1,
+                      color: 'white',
+                    }}
+                  >
+                    Bonjour Dr. {user?.prenom}
+                  </h1>
+
+                  <p
+                    style={{
+                      margin: '16px 0 0',
+                      color:
+                        'rgba(255,255,255,0.78)',
+                      fontSize: 14,
+                      lineHeight: 1.8,
+                      fontWeight: 600,
+                      maxWidth: 470,
+                    }}
+                  >
+                    Suivez les ECG reçus, les analyses
+                    en attente et la répartition des
+                    diagnostics depuis votre espace
+                    médecin.
+                  </p>
+                </div>
+              </div>
+
+              {/* DIAGNOSTIC */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  borderRadius: 24,
+                  padding: 24,
+                  boxShadow:
+                    '0 16px 42px rgba(34, 28, 112, 0.07)',
+                  marginBottom: 22,
+                  minHeight: 472,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 20,
+                  }}
+                >
+                  <div>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: 17,
+                        fontWeight: 950,
+                      }}
+                    >
+                      Répartition des diagnostics
+                    </h2>
+
+                    <p
+                      style={{
+                        margin: '5px 0 0',
+                        color: '#8A8EA6',
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Synthèse des résultats ECG
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      background: '#F3F1FF',
+                      color: '#2920A7',
+                      padding: '8px 14px',
+                      borderRadius: 12,
+                      fontSize: 12,
+                      fontWeight: 900,
+                    }}
+                  >
+                    IA
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Répartition des diagnostics */}
-            <Card className="md:col-span-1" style={{ borderRadius: '20px', background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
-                <CardHeader className="pb-2">
-                    <CardTitle style={{ fontFamily: 'var(--font-family-heading)', color: 'var(--text-primary)', fontSize: '17px' }}>
-                        Répartition des diagnostics
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div style={{ height: '200px', position: 'relative' }} className="mb-6">
-                        <Doughnut data={doughnutData} options={doughnutOptions} />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            {/* Centre vide ou icône subtile */}
-                        </div>
-                    </div>
-                    <div className="space-y-2.5">
-                        {distributionChart.labels.map((label, index) => {
-                            const color = CHART_COLORS[index % CHART_COLORS.length];
-                            const value = distributionChart.values[index] ?? 0;
-                            return (
-                                <div key={label} className="flex items-center justify-between">
-                                    <LegendDot color={color} label={label} />
-                                    <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{value}%</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </CardContent>
-            </Card>
+                <div
+                  className="diagnostic-chart-zone"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns:
+                      '1fr 240px',
+                    gap: 20,
+                    alignItems: 'center',
+                  }}
+                >
+                  <DiagnosticsPieChart
+                    labels={
+                      distributionChart.labels
+                    }
+                    values={
+                      distributionChart.values
+                    }
+                  />
 
-            {/* ECG Récents */}
-            <Card className="md:col-span-2" style={{ borderRadius: '20px', background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
-                <CardHeader className="pb-3 border-b" style={{ borderColor: 'var(--border-color)' }}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle style={{ fontFamily: 'var(--font-family-heading)', color: 'var(--text-primary)', fontSize: '17px' }}>
-                        ECG récents
-                      </CardTitle>
-                      <CardDescription style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
-                        Derniers dossiers reçus
-                      </CardDescription>
-                    </div>
-                    <Link to="/ecg-recus">
-                      <Button variant="outline" size="sm" style={{ borderRadius: '10px', borderColor: 'var(--border-color)', fontSize: '12px' }}>
-                        Voir tout
-                      </Button>
-                    </Link>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
-                    {ecgRecents.length === 0 ? (
-                      <div className="p-12 text-center">
-                        <Activity className="w-12 h-12 mx-auto mb-3 opacity-10" />
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                          Aucun ECG récent.
-                        </p>
-                      </div>
-                    ) : (
-                      ecgRecents.map((ecg) => (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 16,
+                    }}
+                  >
+                    {distributionChart.labels.map(
+                      (label, index) => (
                         <div
-                          key={ecg.id}
-                          className="flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors"
+                          key={label}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                          }}
                         >
-                          <div className="flex items-center gap-4 flex-1 min-w-0">
-                            <div
-                              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                              style={{ background: '#F0F0FF' }}
-                            >
-                              <Activity className="w-5 h-5" style={{ color: 'var(--primary)' }} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <p className="text-sm font-bold truncate" style={{ color: 'var(--text-primary)' }}>
-                                  {ecg.patient}
-                                </p>
-                              </div>
-                              <p className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
-                                {ecg.date} • {ecg.age ?? '--'} ans
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            <Badge
+                          <div
+                            style={{
+                              width: 16,
+                              height: 16,
+                              borderRadius: 5,
+                              background:
+                                CHART_COLORS[
+                                  index %
+                                    CHART_COLORS.length
+                                ],
+                            }}
+                          />
+
+                          <div>
+                            <p
                               style={{
-                                background: ecg.statut === 'Normal' ? '#E8F5F2' : (ecg.statut === 'Anormal' ? '#FEE2E2' : '#F3F4F6'),
-                                color: ecg.statut === 'Normal' ? 'var(--accent-ai)' : (ecg.statut === 'Anormal' ? 'var(--error)' : 'var(--text-secondary)'),
-                                borderRadius: '6px',
-                                border: 'none',
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                padding: '3px 10px',
+                                margin: 0,
+                                fontSize: 13,
+                                fontWeight: 850,
+                                color: '#555B75',
                               }}
                             >
-                              {ecg.statut.toUpperCase()}
-                            </Badge>
-                            <Link to={`/ecg-analysis/${ecg.id}`}>
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-full hover:bg-gray-100">
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                            </Link>
+                              {label}
+                            </p>
+
+                            <p
+                              style={{
+                                margin: '2px 0 0',
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: '#A0A3B8',
+                              }}
+                            >
+                              {
+                                distributionChart
+                                  .values[index]
+                              }
+                              %
+                            </p>
                           </div>
                         </div>
-                      ))
+                      )
                     )}
                   </div>
-                </CardContent>
-            </Card>
+                </div>
+              </div>
+            </section>
+
+            {/* RIGHT */}
+            <aside>
+              {/* SEARCH */}
+              <div
+                style={{
+                  height: 56,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  background: '#f1f5f9',
+                  borderRadius: 20,
+                  padding: '0 18px',
+                  marginBottom: 20,
+                }}
+              >
+                <span
+                  style={{
+                    color: '#64748b',
+                    fontSize: 18,
+                  }}
+                >
+                  ⌕
+                </span>
+
+                <input
+                  value={query}
+                  onChange={(e) =>
+                    setQuery(e.target.value)
+                  }
+                  placeholder="Rechercher un patient..."
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    background: 'transparent',
+                    width: '100%',
+                    color: '#555B75',
+                    fontSize: 13,
+                    fontWeight: 700,
+                  }}
+                />
+              </div>
+
+              {/* ECG RECENTS */}
+              <div
+                style={{
+                  background: '#FFFFFF',
+                  borderRadius: 24,
+                  padding: 22,
+                  boxShadow:
+                    '0 16px 42px rgba(34, 28, 112, 0.07)',
+                  marginBottom: 20,
+                }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 17,
+                    fontWeight: 950,
+                  }}
+                >
+                  ECG récents
+                </h2>
+
+                <p
+                  style={{
+                    margin: '6px 0 18px',
+                    color: '#8A8EA6',
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  Derniers dossiers reçus
+                </p>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gap: 12,
+                    marginBottom: 18,
+                  }}
+                >
+                  {filteredEcgs
+                    .slice(0, 1)
+                    .map((ecg) => (
+                      <Link
+                        key={ecg.id}
+                        to={`/ecg-analysis/${ecg.id}`}
+                        style={{
+                          textDecoration: 'none',
+                        }}
+                      >
+                        <div
+                          className="ecg-line"
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns:
+                              '42px 1fr auto',
+                            gap: 12,
+                            alignItems: 'center',
+                            borderRadius: 18,
+                            padding: 12,
+                            transition:
+                              '0.18s ease',
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 42,
+                              height: 42,
+                              borderRadius: 15,
+                              background:
+                                ecg.urgent
+                                  ? '#fff1f2'
+                                  : '#eef2ff',
+                              color: ecg.urgent
+                                ? '#e11d48'
+                                : '#4f46e5',
+                              display: 'flex',
+                              alignItems:
+                                'center',
+                              justifyContent:
+                                'center',
+                              fontSize: 20,
+                            }}
+                          >
+                            〽
+                          </div>
+
+                          <div>
+                            <p
+                              style={{
+                                margin: 0,
+                                color: '#11142D',
+                                fontSize: 13,
+                                fontWeight: 950,
+                              }}
+                            >
+                              {ecg.patient}
+                            </p>
+
+                            <p
+                              style={{
+                                margin:
+                                  '4px 0 0',
+                                color: '#8A8EA6',
+                                fontSize: 11,
+                                fontWeight: 700,
+                              }}
+                            >
+                              {ecg.age ?? '--'} ans
+                              · {ecg.date}
+                            </p>
+                          </div>
+
+                          <StatusBadge
+                            status={ecg.statut}
+                          />
+                        </div>
+                      </Link>
+                    ))}
+                </div>
+
+                <Link
+                  to="/ecg-recus"
+                  style={{
+                    textDecoration: 'none',
+                  }}
+                >
+                  <button
+                    style={{
+                      width: '100%',
+                      height: 48,
+                      border: 'none',
+                      borderRadius: 18,
+                      background: '#4f46e5',
+                      color: 'white',
+                      fontSize: 13,
+                      fontWeight: 950,
+                      cursor: 'pointer',
+                      boxShadow:
+                        '0 10px 20px rgba(79,70,229,0.2)',
+                    }}
+                  >
+                    Voir tout
+                  </button>
+                </Link>
+              </div>
+
+              {/* MINI CARDS */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    'repeat(3, 1fr)',
+                  gap: 10,
+                }}
+              >
+                <MiniCard
+                  title="Reçus"
+                  value={overview.receivedToday}
+                  color="#4f46e5"
+                  bg="#eef2ff"
+                />
+
+                <MiniCard
+                  title="Attente"
+                  value={overview.pendingAnalyses}
+                  color="#10b981"
+                  bg="#ecfdf5"
+                />
+
+                <MiniCard
+                  title="Urgents"
+                  value={urgentCount}
+                  color="#e11d48"
+                  bg="#fff1f2"
+                />
+              </div>
+
+              {/* KPI */}
+              <div
+                style={{
+                  background:
+                    'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
+                  borderRadius: 22,
+                  padding: 20,
+                  color: 'white',
+                  boxShadow:
+                    '0 15px 35px rgba(79,70,229,0.25)',
+                  marginTop: 18,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent:
+                      'space-around',
+                    gap: 8,
+                  }}
+                >
+                  <KpiCircle
+                    value="98%"
+                    label="Fiabilité IA"
+                    color="#F43F5E"
+                  />
+
+                  <KpiCircle
+                    value="24"
+                    label="Patients suivis"
+                    color="#6D5DF6"
+                  />
+
+                  <KpiCircle
+                    value="247"
+                    label="Analyses validées"
+                    color="#14B8A6"
+                  />
+                </div>
+              </div>
+            </aside>
+          </div>
         </div>
       </div>
-    </MedecinLayout>
+    </DashboardLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router';
-import { MedecinLayout } from '../components/MedecinLayout';
+import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -39,7 +39,7 @@ const analysisData = {
   anomalyCodes: ['AF', 'TACHYCARDIA'],
   anomalies: [
     'Intervalle RR irrégulier caractéristique de la fibrillation auriculaire',
-    'Absence d\'ondes P bien définies',
+    "Absence d'ondes P bien définies",
     'Fréquence cardiaque rapide (tachycardie)',
     'Ondes f de fibrillation visibles en dérivations inférieures'
   ],
@@ -58,7 +58,7 @@ export default function AnalyseECG() {
 
   return (
     <>
-      <MedecinLayout>
+      <DashboardLayout>
         <div className="p-8 space-y-6">
           {/* Header */}
           <div className="flex items-start justify-between">
@@ -324,7 +324,7 @@ export default function AnalyseECG() {
             </div>
           </div>
         </div>
-      </MedecinLayout>
+      </DashboardLayout>
 
       {/* ✅ ChatPanel en dehors de MedecinLayout pour éviter overflow:hidden */}
       <ChatPanel 

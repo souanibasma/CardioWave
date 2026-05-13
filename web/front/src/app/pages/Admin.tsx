@@ -3,7 +3,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import AdminLayout from "./AdminLayout";
+import { DashboardLayout } from "../components/DashboardLayout";
 import { getAdminStats, getAdminCharts, getRecentDoctors } from "../../services/api";
 
 const CSS = `
@@ -202,7 +202,7 @@ export default function Admin() {
   ], [statsData]);
 
   return (
-    <AdminLayout>
+    <DashboardLayout>
       <style>{CSS}</style>
       <div style={{ padding: "2rem 2.5rem" }}>
 
@@ -445,6 +445,6 @@ export default function Admin() {
         </div>
 
       </div>
-    </AdminLayout>
+    </DashboardLayout>
   );
 }

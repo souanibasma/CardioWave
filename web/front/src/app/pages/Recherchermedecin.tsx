@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import { getApprovedDoctors } from "../../services/api";
+import {
+  Activity,
+  Search,
+  ArrowLeft,
+  Mail,
+  Building2,
+  Stethoscope,
+  Send,
+  User,
+} from "lucide-react";
 
 interface Medecin {
   _id: string;
@@ -9,6 +19,13 @@ interface Medecin {
   specialty?: string;
   hospitalOrClinic?: string;
 }
+
+const PRIMARY = "#2920A7";
+const PRIMARY_LIGHT = "#F2F1FF";
+const TEXT = "#11142D";
+const MUTED = "#8A8EA6";
+const SUCCESS = "#0F8A5F";
+const DANGER = "#D3214C";
 
 export default function RechercherMedecin() {
   const navigate = useNavigate();
@@ -23,15 +40,11 @@ export default function RechercherMedecin() {
       try {
         setLoading(true);
         setError("");
-
         const data = await getApprovedDoctors();
         setDoctors(data);
       } catch (err: any) {
         console.error(err);
-        setError(
-          err?.response?.data?.message ||
-            "Erreur lors du chargement des médecins"
-        );
+        setError(err?.response?.data?.message || "Erreur lors du chargement des médecins");
       } finally {
         setLoading(false);
       }
@@ -42,13 +55,10 @@ export default function RechercherMedecin() {
 
   const filtered = useMemo(() => {
     return doctors.filter((m) => {
-      const fullName = (m.fullName || "").toLowerCase();
-      const specialty = (m.specialty || "").toLowerCase();
       const keyword = search.toLowerCase();
-
       return (
-        fullName.includes(keyword) ||
-        specialty.includes(keyword)
+        (m.fullName || "").toLowerCase().includes(keyword) ||
+        (m.specialty || "").toLowerCase().includes(keyword)
       );
     });
   }, [doctors, search]);
@@ -57,148 +67,160 @@ export default function RechercherMedecin() {
     <div
       style={{
         minHeight: "100vh",
-        background: "#F0F6FF",
-        fontFamily: "'DM Sans', sans-serif",
+        padding: 32,
+        background:
+          "radial-gradient(circle at top left, #F2F1FF 0, #ECEBFF 34%, #F8F9FF 68%, #FFFFFF 100%)",
+        fontFamily:
+          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        color: TEXT,
       }}
     >
-      <nav
+      <div
         style={{
-          background: "#fff",
-          borderBottom: "1px solid #E2EEFF",
-          padding: "0 2rem",
-          height: "64px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          position: "sticky",
-          top: 0,
-          zIndex: 50,
+          maxWidth: 1220,
+          margin: "0 auto",
+          background: "rgba(255,255,255,0.92)",
+          borderRadius: 34,
+          boxShadow: "0 40px 110px rgba(41,32,167,0.16)",
+          padding: 28,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "10px",
-              background: "linear-gradient(135deg, #1565C0 0%, #1E88E5 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M22 12h-4l-3 9L9 3l-3 9H2"
-                stroke="#fff"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: "1.1rem",
-              color: "#0D47A1",
-            }}
-          >
-            CardioWave
-          </span>
-        </div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
+        {/* TOP BAR */}
+       
+          
           <button
             onClick={() => navigate("/patient/dashboard")}
             style={{
-              background: "none",
-              border: "none",
-              color: "#1565C0",
-              fontWeight: 500,
+              height: 42,
+              border: "1px solid #ECECFA",
+              background: "#FFFFFF",
+              color: PRIMARY,
+              borderRadius: 16,
+              padding: "0 18px",
+              fontSize: 13,
+              fontWeight: 900,
               cursor: "pointer",
-              fontSize: "0.9rem",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom:10,
+              marginLeft:1000
             }}
           >
-            ← Tableau de bord
+            <ArrowLeft size={16} />
+            Tableau de bord
           </button>
-        </div>
-      </nav>
+   
 
-      <div style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem 1rem" }}>
-        <div style={{ marginBottom: "2rem" }}>
-          <h1
-            style={{
-              fontSize: "1.8rem",
-              fontWeight: 700,
-              color: "#0D47A1",
-              margin: 0,
-            }}
-          >
-            Trouver un médecin
-          </h1>
-          <p
-            style={{
-              color: "#5C85C5",
-              marginTop: "6px",
-              fontSize: "0.95rem",
-            }}
-          >
-            Recherchez un cardiologue et envoyez-lui votre ECG directement.
-          </p>
-        </div>
-
+        {/* HERO */}
         <div
           style={{
-            background: "#fff",
-            borderRadius: "16px",
-            padding: "1.25rem 1.5rem",
-            boxShadow: "0 2px 16px rgba(21,101,192,0.08)",
-            marginBottom: "1.5rem",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "12px",
-            alignItems: "center",
+            position: "relative",
+            overflow: "hidden",
+            background:
+              "linear-gradient(135deg, #4F46E5 0%, #5B4FE9 30%, #6C63FF 65%, #7A74FF 100%)",
+            borderRadius: 26,
+            padding: "28px 34px",
+            color: "white",
+            marginBottom: 24,
+            boxShadow: "0 24px 60px rgba(91,79,233,0.28)",
           }}
         >
-          <div style={{ flex: "1 1 200px", position: "relative" }}>
-            <svg
-              style={{
-                position: "absolute",
-                left: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-              }}
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <circle cx="11" cy="11" r="8" stroke="#90A4AE" strokeWidth="2" />
-              <path
-                d="M21 21l-4.35-4.35"
-                stroke="#90A4AE"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
+          <div
+            style={{
+              position: "absolute",
+              top: -120,
+              right: -80,
+              width: 260,
+              height: 260,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.10)",
+              filter: "blur(4px)",
+            }}
+          />
 
+          <div
+            style={{
+              position: "relative",
+              zIndex: 1,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <h1 style={{ margin: 0, fontSize: 32, fontWeight: 950 }}>
+                Trouver un médecin
+              </h1>
+
+              <p
+                style={{
+                  margin: "12px 0 0",
+                  maxWidth: 580,
+                  color: "rgba(255,255,255,0.82)",
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  fontWeight: 650,
+                }}
+              >
+                Recherchez un cardiologue disponible et envoyez-lui votre ECG directement depuis
+                votre espace patient.
+              </p>
+            </div>
+
+            <img
+              src="/ecg.png"
+              alt="Médecin"
+              style={{
+                width: 190,
+                height: 190,
+                objectFit: "contain",
+                marginRight: -10,
+                marginTop: -28,
+                marginBottom: -28,
+                filter: "drop-shadow(0 18px 40px rgba(0,0,0,0.18))",
+                flexShrink: 0,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* SEARCH */}
+        <div
+          style={{
+            background: "#FFFFFF",
+            borderRadius: 26,
+            padding: 18,
+            marginBottom: 24,
+            boxShadow: "0 18px 45px rgba(34,28,112,0.08)",
+            border: "1px solid #EEEEFA",
+          }}
+        >
+          <div
+            style={{
+              height: 60,
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              background: "#F6F5FF",
+              borderRadius: 20,
+              padding: "0 22px",
+              border: "1px solid #ECEBFF",
+            }}
+          >
+            <Search size={21} color={PRIMARY} />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom, spécialité..."
+              placeholder="Rechercher par nom ou spécialité..."
               style={{
-                width: "100%",
-                paddingLeft: "36px",
-                paddingRight: "12px",
-                height: "40px",
-                borderRadius: "10px",
-                border: "1.5px solid #E2EEFF",
-                fontSize: "0.9rem",
-                color: "#1A237E",
+                border: "none",
                 outline: "none",
-                boxSizing: "border-box",
-                background: "#F8FBFF",
+                background: "transparent",
+                width: "100%",
+                color: "#555B75",
+                fontSize: 15,
+                fontWeight: 750,
               }}
             />
           </div>
@@ -207,47 +229,56 @@ export default function RechercherMedecin() {
         {error && (
           <div
             style={{
-              marginBottom: "1rem",
+              marginBottom: 20,
+              background: "#FFF0F3",
+              color: DANGER,
+              borderRadius: 18,
+              padding: 16,
+              fontWeight: 800,
               textAlign: "center",
-              color: "#C62828",
-              padding: "1rem",
-              background: "#fff",
-              borderRadius: "16px",
-              border: "1px solid #FFCDD2",
             }}
           >
             {error}
           </div>
         )}
 
+        {/* CONTENT */}
         {loading ? (
           <div
             style={{
-              textAlign: "center",
-              color: "#90A4AE",
-              padding: "3rem",
-              background: "#fff",
-              borderRadius: "16px",
+              height: 260,
+              background: "#FFFFFF",
+              borderRadius: 24,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: PRIMARY,
+              fontWeight: 900,
+              boxShadow: "0 16px 42px rgba(34,28,112,0.07)",
             }}
           >
             Chargement des médecins...
           </div>
+        ) : filtered.length === 0 ? (
+          <div
+            style={{
+              background: "#FFFFFF",
+              borderRadius: 24,
+              padding: 56,
+              textAlign: "center",
+              boxShadow: "0 16px 42px rgba(34,28,112,0.07)",
+            }}
+          >
+            <User size={42} color={PRIMARY} style={{ margin: "0 auto 12px" }} />
+            <h2 style={{ margin: 0, color: TEXT, fontSize: 20, fontWeight: 950 }}>
+              Aucun médecin trouvé
+            </h2>
+            <p style={{ margin: "8px 0 0", color: MUTED, fontWeight: 650 }}>
+              Essayez une autre recherche.
+            </p>
+          </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {filtered.length === 0 && (
-              <div
-                style={{
-                  textAlign: "center",
-                  color: "#90A4AE",
-                  padding: "3rem",
-                  background: "#fff",
-                  borderRadius: "16px",
-                }}
-              >
-                Aucun médecin trouvé.
-              </div>
-            )}
-
+          <div style={{ display: "grid", gap: 14 }}>
             {filtered.map((m) => {
               const initials = m.fullName
                 .split(" ")
@@ -260,86 +291,81 @@ export default function RechercherMedecin() {
                 <div
                   key={m._id}
                   style={{
-                    background: "#fff",
-                    borderRadius: "16px",
-                    padding: "1.25rem 1.5rem",
-                    boxShadow: "0 2px 12px rgba(21,101,192,0.07)",
+                    background: "#FFFFFF",
+                    borderRadius: 24,
+                    padding: 18,
+                    border: "1px solid #F1F1FA",
+                    boxShadow: "0 10px 28px rgba(34,28,112,0.05)",
                     display: "flex",
                     alignItems: "center",
-                    gap: "1rem",
-                    flexWrap: "wrap",
-                    transition: "box-shadow 0.2s",
+                    gap: 16,
                   }}
                 >
                   <div
                     style={{
-                      width: 52,
-                      height: 52,
-                      borderRadius: "50%",
-                      background: "linear-gradient(135deg, #1565C0, #42A5F5)",
+                      width: 58,
+                      height: 58,
+                      borderRadius: 20,
+                      background: PRIMARY_LIGHT,
+                      color: PRIMARY,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: "#fff",
-                      fontWeight: 700,
-                      fontSize: "1.1rem",
+                      fontWeight: 950,
+                      fontSize: 16,
                       flexShrink: 0,
                     }}
                   >
                     {initials || "DR"}
                   </div>
 
-                  <div style={{ flex: 1, minWidth: "160px" }}>
-                    <div
-                      style={{
-                        fontWeight: 600,
-                        color: "#0D47A1",
-                        fontSize: "1rem",
-                      }}
-                    >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ margin: 0, color: TEXT, fontSize: 16, fontWeight: 950 }}>
                       {m.fullName}
-                    </div>
-                    <div
-                      style={{
-                        color: "#5C85C5",
-                        fontSize: "0.85rem",
-                        marginTop: "2px",
-                      }}
-                    >
-                      {m.specialty || "Spécialité non renseignée"} ·{" "}
-                      {m.hospitalOrClinic || "Établissement non renseigné"}
-                    </div>
+                    </h3>
 
                     <div
                       style={{
+                        marginTop: 8,
                         display: "flex",
                         alignItems: "center",
-                        gap: "12px",
-                        marginTop: "6px",
+                        gap: 16,
+                        flexWrap: "wrap",
+                        color: MUTED,
+                        fontSize: 13,
+                        fontWeight: 700,
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: "0.8rem",
-                          color: "#90A4AE",
-                        }}
-                      >
-                        {m.email}
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Stethoscope size={14} />
+                        {m.specialty || "Spécialité non renseignée"}
                       </span>
 
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          padding: "2px 10px",
-                          borderRadius: "20px",
-                          background: "#E8F5E9",
-                          color: "#2E7D32",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Disponible
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Building2 size={14} />
+                        {m.hospitalOrClinic || "Établissement non renseigné"}
+                      </span>
+
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <Mail size={14} />
+                        {m.email}
                       </span>
                     </div>
+
+                    <span
+                      style={{
+                        marginTop: 10,
+                        display: "inline-flex",
+                        background: "#E9F9F2",
+                        color: SUCCESS,
+                        borderRadius: 999,
+                        padding: "5px 11px",
+                        fontSize: 11,
+                        fontWeight: 950,
+                      }}
+                    >
+                      Disponible
+                    </span>
                   </div>
 
                   <button
@@ -349,30 +375,23 @@ export default function RechercherMedecin() {
                       })
                     }
                     style={{
-                      background:
-                        "linear-gradient(135deg, #1565C0 0%, #1E88E5 100%)",
-                      color: "#fff",
+                      height: 50,
                       border: "none",
-                      borderRadius: "10px",
-                      padding: "10px 20px",
-                      fontWeight: 600,
-                      fontSize: "0.88rem",
+                      borderRadius: 18,
+                      background: PRIMARY,
+                      color: "#fff",
+                      padding: "0 24px",
+                      fontWeight: 950,
+                      fontSize: 14,
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                       display: "flex",
                       alignItems: "center",
-                      gap: "6px",
+                      gap: 9,
+                      boxShadow: "0 14px 30px rgba(41,32,167,0.22)",
                     }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M22 12h-4l-3 9L9 3l-3 9H2"
-                        stroke="#fff"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    <Send size={17} />
                     Envoyer ECG
                   </button>
                 </div>

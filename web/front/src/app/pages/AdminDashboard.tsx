@@ -43,7 +43,7 @@ const systemLogs = [
 export default function AdminDashboard() {
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="p-6 lg:p-8 space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>

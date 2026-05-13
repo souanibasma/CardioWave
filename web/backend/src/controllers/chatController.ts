@@ -9,7 +9,12 @@ export const chatWithECG = async (req: Request, res: Response) => {
     const { message, history } = req.body;
 
     // 1. Get ECGAnalysis from DB
-    const analysis = await ECGAnalysis.findById(analysisId).populate("ecg");
+    let analysis = await ECGAnalysis.findById(analysisId).populate("ecg");
+
+    // Fallback: If not found, maybe the provided ID is an ECG ID
+    if (!analysis) {
+      analysis = await ECGAnalysis.findOne({ ecg: analysisId }).populate("ecg");
+    }
 
     if (!analysis) {
       return res.status(404).json({ message: "Analysis not found" });
@@ -20,7 +25,7 @@ export const chatWithECG = async (req: Request, res: Response) => {
     const doctorNotes = analysis.doctorNotes || "";
 
     // 3. Call FastAPI chatbot
-    const response = await axios.post("http://localhost:8002/chat", {
+    const response = await axios.post("http://localhost:8003/chat", {
       message,
       aiResult,
       doctorNotes,

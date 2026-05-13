@@ -1,4 +1,4 @@
-import { MedecinLayout } from '../components/MedecinLayout';
+import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent } from '../components/ui/card';
 import { Construction } from 'lucide-react';
 
@@ -9,7 +9,7 @@ interface PlaceholderProps {
 
 export default function PlaceholderMedecin({ titre, description }: PlaceholderProps) {
   return (
-    <MedecinLayout>
+    <DashboardLayout>
       <div className="p-8 flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md border-0 shadow-sm" style={{ borderRadius: '16px', background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
           <CardContent className="p-12 text-center">
@@ -25,6 +25,6 @@ export default function PlaceholderMedecin({ titre, description }: PlaceholderPr
           </CardContent>
         </Card>
       </div>
-    </MedecinLayout>
+    </DashboardLayout>
   );
 }

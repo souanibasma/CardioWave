@@ -1,11 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MedecinLayout } from '../components/MedecinLayout';
-import { getDoctorMyPatients, getImageUrl } from '../../services/api';
-import { 
-  User, Mail, Phone, Calendar, 
-  ChevronDown, ChevronUp, Activity, 
-  Eye, Download, Search, Filter 
+import { DashboardLayout } from '../components/DashboardLayout';
+import { getDoctorMyPatients } from '../../services/api';
+
+
+import {
+  User,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Phone,
+  Mail,
+  Activity,
+  Filter,
+  Loader2,
+  Download,
+  Clock,
 } from 'lucide-react';
 
 interface ECGEntry {
@@ -19,11 +30,12 @@ interface ECGEntry {
 }
 
 interface Patient {
-  id: string;
+  _id: string;
+  id?: string;
   fullName: string;
   email: string;
   phone: string;
-  age: number | string;
+  age: string | number;
   gender: string;
   riskLevel: string;
   ecgsCount: number;
@@ -31,11 +43,20 @@ interface Patient {
   ecgs: ECGEntry[];
 }
 
+const PRIMARY = '#4f46e5';
+const PRIMARY_LIGHT = '#eef2ff';
+const TEXT = '#1e293b';
+const MUTED = '#64748b';
+const SUCCESS = '#10b981';
+const WARNING = '#f59e0b';
+const DANGER = '#ef4444';
+
 export default function MyPatients() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,231 +66,927 @@ export default function MyPatients() {
   const fetchPatients = async () => {
     try {
       setLoading(true);
+
       const data = await getDoctorMyPatients();
-      setPatients(data);
+
+      const mapped = (data || []).map((p: any) => ({
+        ...p,
+        _id: String(p.id || p._id),
+      }));
+
+      setPatients(mapped);
     } catch (error) {
-      console.error("Erreur lors de la récupération des patients:", error);
+      console.error('Erreur patients:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
+  const toggleExpand = (id: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    const stringId = String(id);
+
+    setExpandedId(expandedId === stringId ? null : stringId);
   };
 
-  const filteredPatients = patients.filter(p => 
-    p.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPatients = patients.filter(
+    (p) =>
+      (p.fullName || '')
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (p.email || '')
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
+  const getRiskStyles = (risk: string) => {
+    switch (risk?.toLowerCase()) {
+      case 'critique':
+        return {
+          bg: '#fef2f2',
+          color: DANGER,
+        };
+
+      case 'anormal':
+        return {
+          bg: '#fffbeb',
+          color: WARNING,
+        };
+
+      default:
+        return {
+          bg: '#ecfdf5',
+          color: SUCCESS,
+        };
+    }
+  };
+
   return (
-    <MedecinLayout>
-      <div className="p-8 space-y-6" style={{ background: '#F8FAFC', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold" style={{ color: '#0F172A' }}>Mes Patients</h1>
-            <p className="text-slate-500 mt-1">Gérez vos dossiers patients et l'historique des analyses ECG.</p>
+    <DashboardLayout>
+      <div
+        style={{
+          minHeight: '100vh',
+          padding: 24,
+          background: '#f8fafc',
+          fontFamily:
+            "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          color: TEXT,
+        }}
+      >
+        {/* MAIN CONTAINER */}
+        <div
+          style={{
+            width: '100%',
+            padding: '18px 22px',
+            background: 'transparent',
+          }}
+        >
+          {/* HERO */}
+          <div
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              background:
+                'linear-gradient(135deg, #4f46e5 0%, #4338ca 45%, #3730a3 100%)',
+              borderRadius: 30,
+              padding: '28px 34px',
+              marginBottom: 22,
+              boxShadow: '0 28px 80px rgba(79,70,229,0.22)',
+            }}
+          >
+            {/* BG EFFECTS */}
+            <div
+              style={{
+                position: 'absolute',
+                top: -120,
+                right: -80,
+                width: 320,
+                height: 320,
+                background:
+                  'radial-gradient(circle, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 72%)',
+              }}
+            />
+
+            <div
+              style={{
+                position: 'absolute',
+                bottom: -80,
+                left: -40,
+                width: 220,
+                height: 220,
+                background:
+                  'radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%)',
+              }}
+            />
+
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 2,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 30,
+                flexWrap: 'wrap',
+              }}
+            >
+              {/* LEFT */}
+              <div>
+                <h1
+                  style={{
+                    margin: 0,
+                    color: 'white',
+                    fontSize: 44,
+                    fontWeight: 950,
+                    lineHeight: 1.05,
+                    letterSpacing: '-1.5px',
+                  }}
+                >
+                  Mes Patients
+                </h1>
+
+                <p
+                  style={{
+                    margin: '16px 0 0',
+                    maxWidth: 720,
+                    color: 'rgba(255,255,255,0.78)',
+                    fontSize: 15,
+                    lineHeight: 1.8,
+                    fontWeight: 500,
+                  }}
+                >
+                  Gérez vos dossiers patients et l'historique des analyses ECG
+                  en temps réel.
+                </p>
+              </div>
+
+              {/* RIGHT ILLUSTRATION */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                  <img
+                      src="/pagePatients4.png"
+                      alt="ECG Illustration"
+                      style={{
+                        position: 'absolute',
+                        right: 30,
+                        top: '-80%',
+                        transform: 'translateY(-10  %)',
+
+                        width: 400,
+                        height: 'auto',
+
+                        objectFit: 'contain',
+
+                        opacity: 0.95,
+
+                        filter:
+                          'drop-shadow(0 25px 45px rgba(0,0,0,0.22))',
+
+                        pointerEvents: 'none',
+
+                        zIndex: 2,
+                      }}
+                />
+              </div>
+            </div>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Rechercher un patient..." 
-                className="pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+
+          {/* SEARCH BAR */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
+            <div
+              style={{
+                flex: 1,
+                height: 62,
+                background: '#FFFFFF',
+                borderRadius: 22,
+                border: '1px solid #eef2f7',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 22px',
+                gap: 14,
+                boxShadow: '0 10px 30px rgba(79,70,229,0.04)',
+              }}
+            >
+              <Search size={20} color={PRIMARY} />
+
+              <input
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) =>
+                  setSearchTerm(e.target.value)
+                }
+                placeholder="Rechercher par nom ou email..."
+                style={{
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  width: '100%',
+                  color: TEXT,
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
               />
             </div>
-            <button className="p-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors">
-              <Filter className="w-5 h-5" />
+
+            <button
+              style={{
+                height: 62,
+                width: 62,
+                borderRadius: 22,
+                background: '#FFFFFF',
+                border: '1px solid #eef2f7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: MUTED,
+                boxShadow:
+                  '0 10px 30px rgba(79,70,229,0.04)',
+              }}
+            >
+              <Filter size={22} />
             </button>
           </div>
-        </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredPatients.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 text-center border border-slate-100">
-                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <User className="w-8 h-8 text-slate-300" />
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900">Aucun patient trouvé</h3>
-                <p className="text-slate-500">Essayez une autre recherche ou vérifiez vos filtres.</p>
-              </div>
-            ) : (
-              filteredPatients.map((patient) => (
-                <div 
-                  key={patient.id} 
-                  className={`bg-white rounded-[24px] border transition-all duration-300 ${
-                    expandedId === patient.id ? 'border-blue-200 shadow-xl shadow-blue-500/5 ring-1 ring-blue-50' : 'border-slate-100 shadow-sm hover:border-slate-200'
-                  }`}
+          {/* CONTENT */}
+          {loading ? (
+            <div
+              style={{
+                height: 280,
+                background: '#FFFFFF',
+                borderRadius: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: 16,
+                color: PRIMARY,
+                fontWeight: 900,
+                boxShadow:
+                  '0 16px 42px rgba(79,70,229,0.07)',
+              }}
+            >
+              <Loader2
+                className="animate-spin"
+                size={40}
+              />
+
+              Chargement des patients...
+            </div>
+          ) : filteredPatients.length === 0 ? (
+            <div
+              style={{
+                background: '#FFFFFF',
+                borderRadius: 28,
+                padding: 60,
+                textAlign: 'center',
+                boxShadow:
+                  '0 16px 42px rgba(79,70,229,0.07)',
+              }}
+            >
+              <User
+                size={48}
+                color="#cbd5e1"
+                style={{ margin: '0 auto 14px' }}
+              />
+
+              <h2
+                style={{
+                  margin: 0,
+                  color: TEXT,
+                  fontSize: 22,
+                  fontWeight: 950,
+                }}
+              >
+                Aucun patient trouvé
+              </h2>
+
+              <p
+                style={{
+                  margin: '10px 0 0',
+                  color: MUTED,
+                  fontWeight: 650,
+                }}
+              >
+                Vérifiez votre recherche ou ajoutez un
+                nouveau patient.
+              </p>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: 'grid',
+                gap: 18,
+              }}
+            >
+              {filteredPatients.map((p) => (
+                <div
+                  key={p._id}
+                  style={{
+                    background: '#FFFFFF',
+                    borderRadius: 28,
+                    overflow: 'hidden',
+                    border:
+                      expandedId === p._id
+                        ? `2px solid ${PRIMARY}`
+                        : '1px solid #eef2f7',
+                    boxShadow:
+                      expandedId === p._id
+                        ? '0 22px 44px rgba(79,70,229,0.12)'
+                        : '0 12px 34px rgba(79,70,229,0.06)',
+                    transition:
+                      'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
                 >
-                  {/* Patient Row Header */}
-                  <div 
-                    className="p-5 flex items-center justify-between cursor-pointer"
-                    onClick={() => toggleExpand(patient.id)}
+                  {/* MAIN ROW */}
+                  <div
+                    onClick={(e) =>
+                      toggleExpand(p._id, e)
+                    }
+                    style={{
+                      padding: '24px 26px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 20,
+                      cursor: 'pointer',
+                    }}
                   >
-                    <div className="flex items-center gap-4">
-                      {/* Avatar */}
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg ${
-                        patient.riskLevel === 'Critique' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-                      }`}>
-                        {patient.fullName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {/* LEFT */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 18,
+                        minWidth: 0,
+                      }}
+                    >
+                      {/* AVATAR */}
+                      <div
+                        style={{
+                          width: 60,
+                          height: 60,
+                          borderRadius: 20,
+                          background:
+                            p.riskLevel === 'Critique'
+                              ? '#fef2f2'
+                              : PRIMARY_LIGHT,
+                          color:
+                            p.riskLevel === 'Critique'
+                              ? DANGER
+                              : PRIMARY,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 900,
+                          fontSize: 20,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {p.fullName
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase()}
                       </div>
-                      
-                      {/* Basic Info */}
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-slate-900">{patient.fullName}</h3>
-                          <span className="text-slate-400 text-sm">•</span>
-                          <span className="text-slate-500 text-sm">{patient.age} ans</span>
-                          {patient.riskLevel === 'Critique' && (
-                            <span className="bg-red-100 text-red-600 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Critique</span>
+
+                      {/* INFOS */}
+                      <div style={{ minWidth: 0 }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            flexWrap: 'wrap',
+                            marginBottom: 6,
+                          }}
+                        >
+                          <h3
+                            style={{
+                              margin: 0,
+                              fontSize: 18,
+                              fontWeight: 900,
+                              color: TEXT,
+                            }}
+                          >
+                            {p.fullName}
+                          </h3>
+
+                          <span
+                            style={{
+                              fontSize: 13,
+                              color: MUTED,
+                              fontWeight: 700,
+                            }}
+                          >
+                            {p.age} ans
+                          </span>
+
+                          {p.riskLevel === 'Critique' && (
+                            <span
+                              style={{
+                                background: '#fee2e2',
+                                color: DANGER,
+                                fontSize: 10,
+                                fontWeight: 900,
+                                padding: '4px 9px',
+                                borderRadius: 999,
+                                textTransform:
+                                  'uppercase',
+                              }}
+                            >
+                              Critique
+                            </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-slate-400">
-                          <div className="flex items-center gap-1.5">
-                            <Mail className="w-3.5 h-3.5" />
-                            {patient.email}
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3.5 h-3.5" />
-                            {patient.phone}
-                          </div>
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 18,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              fontSize: 13,
+                              color: MUTED,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Mail size={14} />
+                            {p.email}
+                          </span>
+
+                          <span
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              fontSize: 13,
+                              color: MUTED,
+                              fontWeight: 600,
+                            }}
+                          >
+                            <Phone size={14} />
+                            {p.phone}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-8">
-                      {/* Stats */}
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-slate-900">{patient.ecgsCount}</div>
-                        <div className="text-[11px] text-slate-400 uppercase font-semibold">ECG Envoyés</div>
+                    {/* RIGHT */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 28,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {/* ECG COUNT */}
+                      <div
+                        style={{
+                          textAlign: 'right',
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 22,
+                            fontWeight: 950,
+                            color: TEXT,
+                          }}
+                        >
+                          {p.ecgsCount}
+                        </p>
+
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 11,
+                            fontWeight: 800,
+                            color: MUTED,
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          ECG Total
+                        </p>
                       </div>
 
-                      {/* Latest Status */}
-                      <div className="text-right min-w-[100px]">
-                        <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${
-                          patient.riskLevel === 'Normal' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                        }`}>
-                          {patient.riskLevel}
+                      {/* STATUS */}
+                      <div
+                        style={{
+                          textAlign: 'right',
+                          minWidth: 120,
+                        }}
+                      >
+                        <span
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: 999,
+                            background:
+                              getRiskStyles(
+                                p.riskLevel
+                              ).bg,
+                            color:
+                              getRiskStyles(
+                                p.riskLevel
+                              ).color,
+                            fontSize: 11,
+                            fontWeight: 900,
+                            textTransform:
+                              'uppercase',
+                          }}
+                        >
+                          {p.riskLevel}
                         </span>
-                        <div className="text-[11px] text-slate-400 mt-1">{formatDate(patient.lastActivity)}</div>
+
+                        <p
+                          style={{
+                            margin: '8px 0 0',
+                            fontSize: 12,
+                            color: MUTED,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {formatDate(
+                            p.lastActivity
+                          )}
+                        </p>
                       </div>
 
-                      {/* Toggle Button */}
-                      <div className={`p-2 rounded-full transition-colors ${expandedId === patient.id ? 'bg-blue-50 text-blue-600' : 'text-slate-300'}`}>
-                        {expandedId === patient.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                      {/* TOGGLE */}
+                      <div
+                        style={{
+                          color:
+                            expandedId === p._id
+                              ? PRIMARY
+                              : '#cbd5e1',
+                          transition: '0.2s',
+                        }}
+                      >
+                        {expandedId === p._id ? (
+                          <ChevronUp size={24} />
+                        ) : (
+                          <ChevronDown size={24} />
+                        )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Expanded Content (Dossier Patient) */}
-                  {expandedId === patient.id && (
-                    <div className="border-t border-slate-50 p-6 bg-slate-50/30 rounded-b-[24px] animate-in fade-in slide-in-from-top-2 duration-300">
-                      <div className="flex items-center justify-between mb-6">
-                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">Dossier ECG — {patient.fullName}</h4>
-                        <button 
-                          onClick={() => navigate(`/patient/${patient.id}`)}
-                          className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  {/* EXPANDED */}
+                  {expandedId === p._id && (
+                    <div
+                      style={{
+                        padding: '0 26px 26px',
+                        background:
+                          'linear-gradient(to bottom, #ffffff, #fafbff)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          height: 1,
+                          background: '#f1f5f9',
+                          marginBottom: 24,
+                        }}
+                      />
+
+                      {/* HEADER */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent:
+                            'space-between',
+                          marginBottom: 18,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                          }}
                         >
-                          Voir dossier complet <Activity className="w-3.5 h-3.5" />
+                          <Activity
+                            size={20}
+                            color={PRIMARY}
+                          />
+
+                          <h4
+                            style={{
+                              margin: 0,
+                              fontSize: 14,
+                              fontWeight: 900,
+                              color: TEXT,
+                              textTransform:
+                                'uppercase',
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            Historique ECG Récent
+                          </h4>
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/dossier-patient/${p._id}`
+                            )
+                          }
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: PRIMARY,
+                            fontSize: 13,
+                            fontWeight: 900,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                        >
+                          Dossier complet
+
+                          <ChevronRight size={16} />
                         </button>
                       </div>
 
-                      {/* Patient Info Summary Bar */}
-                      <div className="bg-white/60 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 flex flex-wrap items-center gap-6 mb-6">
-                        <div className="flex items-center gap-2 text-slate-500 text-sm">
-                          <Calendar className="w-4 h-4" />
-                          Dernière activité : <span className="font-semibold text-slate-900">{formatDate(patient.lastActivity)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-500 text-sm">
-                          <Activity className="w-4 h-4" />
-                          {patient.ecgsCount} ECG au total
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-500 text-sm">
-                          <Mail className="w-4 h-4" />
-                          {patient.email}
-                        </div>
-                        <div className="flex items-center gap-2 text-slate-500 text-sm ml-auto">
-                          <Phone className="w-4 h-4" />
-                          {patient.phone}
-                        </div>
-                      </div>
-
-                      {/* ECG List */}
-                      <div className="space-y-3">
-                        {patient.ecgs.length === 0 ? (
-                          <div className="text-center py-6 text-slate-400 italic text-sm">
-                            Aucun examen ECG enregistré pour ce patient.
+                      {/* ECG LIST */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 12,
+                        }}
+                      >
+                        {!p.ecgs ||
+                        p.ecgs.length === 0 ? (
+                          <div
+                            style={{
+                              padding: 34,
+                              textAlign: 'center',
+                              color: MUTED,
+                              fontSize: 14,
+                              fontStyle: 'italic',
+                              background: '#f8fafc',
+                              borderRadius: 20,
+                            }}
+                          >
+                            Aucun examen ECG enregistré
+                            pour ce patient.
                           </div>
                         ) : (
-                          patient.ecgs.map((ecg) => (
-                            <div 
-                              key={ecg.id}
-                              className="bg-white border border-slate-100 rounded-2xl p-4 flex items-center justify-between hover:shadow-md transition-shadow"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-                                  <Activity className="w-5 h-5 text-indigo-600" />
-                                </div>
-                                <div>
-                                  <div className="font-bold text-slate-900 text-sm">{ecg.condition || ecg.result || "Analyse en cours"}</div>
-                                  <div className="text-xs text-slate-400">{new Date(ecg.date).toLocaleString('fr-FR')}</div>
-                                </div>
-                              </div>
+                          p.ecgs
+                            .slice(0, 4)
+                            .map((ecg) => (
+                              <div
+                                key={ecg.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
 
-                              <div className="flex items-center gap-4">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                  ecg.result?.toLowerCase().includes('normal') ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'
-                                }`}>
-                                  {ecg.result || "En attente"}
-                                </span>
-                                
-                                <div className="flex items-center gap-2">
-                                  <button 
-                                    onClick={() => navigate(`/ecg-analysis/${ecg.id}`)}
-                                    className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg flex items-center gap-1.5 border border-slate-200 transition-colors"
+                                  navigate(
+                                    `/ecg-analysis/${ecg.id}`
+                                  );
+                                }}
+                                style={{
+                                  background: '#FFFFFF',
+                                  padding:
+                                    '16px 18px',
+                                  borderRadius: 22,
+                                  border:
+                                    '1px solid #eef2f7',
+                                  display: 'flex',
+                                  alignItems:
+                                    'center',
+                                  justifyContent:
+                                    'space-between',
+                                  gap: 20,
+                                  cursor: 'pointer',
+                                  transition:
+                                    '0.2s ease',
+                                  boxShadow:
+                                    '0 6px 18px rgba(0,0,0,0.02)',
+                                }}
+                                onMouseEnter={(
+                                  e
+                                ) => {
+                                  e.currentTarget.style.borderColor =
+                                    PRIMARY;
+                                }}
+                                onMouseLeave={(
+                                  e
+                                ) => {
+                                  e.currentTarget.style.borderColor =
+                                    '#eef2f7';
+                                }}
+                              >
+                                {/* LEFT */}
+                                <div
+                                  style={{
+                                    display:
+                                      'flex',
+                                    alignItems:
+                                      'center',
+                                    gap: 14,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      width: 42,
+                                      height: 42,
+                                      borderRadius: 14,
+                                      background:
+                                        '#f5f7ff',
+                                      display:
+                                        'flex',
+                                      alignItems:
+                                        'center',
+                                      justifyContent:
+                                        'center',
+                                      color: PRIMARY,
+                                    }}
                                   >
-                                    Voir
-                                  </button>
-                                  <button 
-                                    className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-lg flex items-center gap-1.5 border border-slate-200 transition-colors"
+                                    <Clock
+                                      size={18}
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <p
+                                      style={{
+                                        margin: 0,
+                                        fontSize: 14,
+                                        fontWeight: 800,
+                                        color: TEXT,
+                                      }}
+                                    >
+                                      {ecg.title}
+                                    </p>
+
+                                    <p
+                                      style={{
+                                        margin: 0,
+                                        fontSize: 11,
+                                        color: MUTED,
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {new Date(
+                                        ecg.date
+                                      ).toLocaleString(
+                                        'fr-FR'
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* RIGHT */}
+                                <div
+                                  style={{
+                                    display:
+                                      'flex',
+                                    alignItems:
+                                      'center',
+                                    gap: 18,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 900,
+                                      padding:
+                                        '5px 10px',
+                                      borderRadius: 999,
+                                      background:
+                                        ecg.result
+                                          ?.toLowerCase()
+                                          .includes(
+                                            'normal'
+                                          ) &&
+                                        !ecg.result
+                                          ?.toLowerCase()
+                                          .includes(
+                                            'anormal'
+                                          )
+                                          ? '#ecfdf5'
+                                          : '#fef2f2',
+                                      color:
+                                        ecg.result
+                                          ?.toLowerCase()
+                                          .includes(
+                                            'normal'
+                                          ) &&
+                                        !ecg.result
+                                          ?.toLowerCase()
+                                          .includes(
+                                            'anormal'
+                                          )
+                                          ? SUCCESS
+                                          : DANGER,
+                                      textTransform:
+                                        'uppercase',
+                                    }}
                                   >
-                                    <Download className="w-3.5 h-3.5" />
-                                    Télécharger
-                                  </button>
+                                    {ecg.result}
+                                  </span>
+
+                                  <div
+                                    style={{
+                                      display:
+                                        'flex',
+                                      gap: 8,
+                                    }}
+                                  >
+                                    <button
+                                      onClick={() =>
+                                        navigate(
+                                          `/ecg-analysis/${ecg.id}`
+                                        )
+                                      }
+                                      style={{
+                                        padding:
+                                          '10px 16px',
+                                        borderRadius: 14,
+                                        background:
+                                          '#FFFFFF',
+                                        border:
+                                          '1px solid #e2e8f0',
+                                        color: TEXT,
+                                        fontSize: 12,
+                                        fontWeight: 800,
+                                        cursor:
+                                          'pointer',
+                                      }}
+                                    >
+                                      Analyser
+                                    </button>
+
+                                    <button
+                                      style={{
+                                        width: 38,
+                                        height: 38,
+                                        borderRadius: 14,
+                                        background:
+                                          '#f8fafc',
+                                        border:
+                                          'none',
+                                        color:
+                                          MUTED,
+                                        display:
+                                          'flex',
+                                        alignItems:
+                                          'center',
+                                        justifyContent:
+                                          'center',
+                                        cursor:
+                                          'pointer',
+                                      }}
+                                    >
+                                      <Download
+                                        size={16}
+                                      />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            ))
                         )}
                       </div>
                     </div>
                   )}
                 </div>
-              ))
-            )}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </MedecinLayout>
+    </DashboardLayout>
   );
 }

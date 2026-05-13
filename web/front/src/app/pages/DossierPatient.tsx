@@ -1,75 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MedecinLayout } from '../components/MedecinLayout';
+import { getDoctorPatientDetails } from '../../services/api';
+import { DashboardLayout } from '../components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { User, Mail, Phone, MapPin, Calendar, Activity, FileText, Eye } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Activity, FileText, Eye, Loader2 } from 'lucide-react';
 
-// Mock patient data
-const patientData = {
-  id: '1',
-  nom: 'Dubois',
-  prenom: 'Marie',
-  age: 62,
-  dateNaissance: '15/03/1962',
-  email: 'marie.dubois@email.fr',
-  telephone: '+33 6 12 34 56 78',
-  adresse: '15 Rue de la République, 75001 Paris',
-  numeroSecu: '2 62 03 75 123 456 78',
-  groupeSanguin: 'A+',
-  antecedents: [
-    'Hypertension artérielle',
-    'Diabète de type 2',
-    'Hypercholestérolémie'
-  ],
-  traitements: [
-    'Ramipril 5mg - 1 fois/jour',
-    'Metformine 850mg - 2 fois/jour',
-    'Atorvastatine 20mg - 1 fois/jour'
-  ]
-};
-
-const ecgHistorique = [
-  { 
-    id: 1, 
-    date: '02/04/2024', 
-    heure: '14:30',
-    resultat: 'Anormal', 
-    diagnostic: 'Fibrillation Auriculaire',
-    frequence: '145 bpm',
-    statut: 'Analysé'
-  },
-  { 
-    id: 2, 
-    date: '15/03/2024', 
-    heure: '10:15',
-    resultat: 'Normal', 
-    diagnostic: 'Sinus Rhythm',
-    frequence: '72 bpm',
-    statut: 'Analysé'
-  },
-  { 
-    id: 3, 
-    date: '28/02/2024', 
-    heure: '16:45',
-    resultat: 'Normal', 
-    diagnostic: 'Sinus Rhythm',
-    frequence: '68 bpm',
-    statut: 'Analysé'
-  },
-  { 
-    id: 4, 
-    date: '10/01/2024', 
-    heure: '09:30',
-    resultat: 'Normal', 
-    diagnostic: 'Sinus Rhythm',
-    frequence: '75 bpm',
-    statut: 'Analysé'
-  },
-];
-
+// Mock clinical notes (remaining UI only for now)
 const notesMedicales = [
   {
     id: 1,
@@ -85,13 +24,57 @@ const notesMedicales = [
   }
 ];
 
+
 export default function DossierPatient() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState('informations');
+  const [patient, setPatient] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (!id) return;
+      try {
+        setLoading(true);
+        const data = await getDoctorPatientDetails(id);
+        setPatient(data);
+      } catch (error) {
+        console.error('Erreur details patient:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetails();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="p-8 flex items-center justify-center min-h-[400px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-3 font-medium text-slate-600">Chargement du dossier...</span>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!patient) {
+    return (
+      <DashboardLayout>
+        <div className="p-8 text-center">
+          <h2 className="text-2xl font-bold text-slate-800">Patient introuvable</h2>
+          <p className="text-slate-500 mt-2">Le dossier demandé n'existe pas ou vous n'y avez pas accès.</p>
+          <Link to="/mes-patients">
+            <Button className="mt-4">Retour à la liste</Button>
+          </Link>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <MedecinLayout>
-      <div className="p-8 space-y-6">
+    <DashboardLayout>
+      <div className="p-6 lg:p-10 space-y-6">
         {/* Header Patient */}
         <div>
           <div className="flex items-start justify-between mb-4">
@@ -101,21 +84,23 @@ export default function DossierPatient() {
               </div>
               <div>
                 <h1 className="text-4xl mb-2" style={{ fontFamily: 'var(--font-family-heading)', color: 'var(--text-primary)' }}>
-                  {patientData.prenom} {patientData.nom}
+                  {patient.fullName}
                 </h1>
                 <div className="flex items-center gap-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  <span>{patientData.age} ans</span>
+                  <span>{patient.age} ans</span>
                   <span>•</span>
-                  <span>Né(e) le {patientData.dateNaissance}</span>
+                  <span>{patient.gender === 'male' || patient.gender === 'M' ? 'Homme' : 'Femme'}</span>
                   <span>•</span>
-                  <span>Groupe {patientData.groupeSanguin}</span>
+                  <span>Email: {patient.email}</span>
                 </div>
               </div>
             </div>
-            <Button style={{ background: 'var(--primary)', borderRadius: '10px' }}>
-              <Activity className="w-4 h-4 mr-2" />
-              Nouveau ECG
-            </Button>
+            <Link to={`/patient/envoyer-ecg/${patient._id}`}>
+              <Button style={{ background: 'var(--primary)', borderRadius: '10px' }}>
+                <Activity className="w-4 h-4 mr-2" />
+                Nouveau ECG
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -142,6 +127,7 @@ export default function DossierPatient() {
             >
               Historique ECG
             </TabsTrigger>
+            {/* Notes médicales logic not yet implemented in backend as a standalone collection, keeping for UI */}
             <TabsTrigger 
               value="notes" 
               style={{ 
@@ -168,28 +154,21 @@ export default function DossierPatient() {
                     <Mail className="w-5 h-5 mt-0.5" style={{ color: 'var(--text-secondary)' }} />
                     <div>
                       <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Email</p>
-                      <p style={{ color: 'var(--text-primary)' }}>{patientData.email}</p>
+                      <p style={{ color: 'var(--text-primary)' }}>{patient.email}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Phone className="w-5 h-5 mt-0.5" style={{ color: 'var(--text-secondary)' }} />
                     <div>
                       <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Téléphone</p>
-                      <p style={{ color: 'var(--text-primary)' }}>{patientData.telephone}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 mt-0.5" style={{ color: 'var(--text-secondary)' }} />
-                    <div>
-                      <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Adresse</p>
-                      <p style={{ color: 'var(--text-primary)' }}>{patientData.adresse}</p>
+                      <p style={{ color: 'var(--text-primary)' }}>{patient.phone || 'Non renseigné'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Calendar className="w-5 h-5 mt-0.5" style={{ color: 'var(--text-secondary)' }} />
                     <div>
-                      <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>N° Sécurité Sociale</p>
-                      <p style={{ color: 'var(--text-primary)' }}>{patientData.numeroSecu}</p>
+                      <p className="text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Date de naissance</p>
+                      <p style={{ color: 'var(--text-primary)' }}>{patient.dateOfBirth ? new Date(patient.dateOfBirth).toLocaleDateString() : 'Non renseignée'}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -198,30 +177,24 @@ export default function DossierPatient() {
               <Card className="border-0 shadow-sm" style={{ borderRadius: '16px', background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
                 <CardHeader>
                   <CardTitle style={{ fontFamily: 'var(--font-family-heading)', color: 'var(--text-primary)', fontSize: '18px' }}>
-                    Antécédents médicaux
+                    Résumé Médical
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-sm mb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Pathologies</p>
-                    <div className="space-y-2">
-                      {patientData.antecedents.map((antecedent, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--accent-ai)' }} />
-                          <p style={{ color: 'var(--text-primary)', fontSize: '15px' }}>{antecedent}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm mb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Traitements en cours</p>
-                    <div className="space-y-2">
-                      {patientData.traitements.map((traitement, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--primary)' }} />
-                          <p style={{ color: 'var(--text-primary)', fontSize: '15px' }}>{traitement}</p>
-                        </div>
-                      ))}
+                    <p className="text-sm mb-2 font-medium" style={{ color: 'var(--text-secondary)' }}>Analyses ECG</p>
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>{patient.ecgs?.length || 0}</p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Total</p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-100" />
+                      <div className="text-center">
+                        <p className="text-2xl font-bold" style={{ color: 'var(--error)' }}>
+                          {patient.ecgs?.filter((e: any) => e.urgent || e.result?.toLowerCase().includes('abnormal') || e.result?.toLowerCase().includes('anormal')).length || 0}
+                        </p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Alertes</p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -234,51 +207,57 @@ export default function DossierPatient() {
             <Card className="border-0 shadow-sm" style={{ borderRadius: '16px', background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
               <CardContent className="p-6">
                 <div className="space-y-3">
-                  {ecgHistorique.map((ecg) => (
-                    <div 
-                      key={ecg.id}
-                      className="flex items-center justify-between p-4 rounded-xl"
-                      style={{ background: 'var(--background)', border: '1px solid var(--border-color)' }}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: '#EEF2FF' }}>
-                          <Activity className="w-6 h-6" style={{ color: 'var(--primary)' }} />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
-                              ECG - {ecg.date}
-                            </p>
-                            <Badge 
-                              style={{ 
-                                background: ecg.resultat === 'Normal' ? '#E8F5F2' : '#FEE2E2',
-                                color: ecg.resultat === 'Normal' ? 'var(--accent-ai)' : 'var(--error)',
-                                borderRadius: '6px',
-                                border: 'none'
-                              }}
-                            >
-                              {ecg.resultat}
-                            </Badge>
-                          </div>
-                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                            {ecg.diagnostic} • FC: {ecg.frequence} • {ecg.heure}
-                          </p>
-                        </div>
-                      </div>
-                      <Link to={`/analyse-ecg/${ecg.id}`}>
-                        <Button size="sm" variant="outline" style={{ borderRadius: '8px', borderColor: 'var(--border-color)' }}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Voir l'analyse
-                        </Button>
-                      </Link>
+                  {!patient.ecgs || patient.ecgs.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400 font-medium">
+                      Aucun historique d'ECG pour ce patient.
                     </div>
-                  ))}
+                  ) : (
+                    patient.ecgs.map((ecg: any) => (
+                      <div 
+                        key={ecg.id}
+                        className="flex items-center justify-between p-4 rounded-xl"
+                        style={{ background: 'var(--background)', border: '1px solid var(--border-color)' }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: '#EEF2FF' }}>
+                            <Activity className="w-6 h-6" style={{ color: 'var(--primary)' }} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                                {ecg.title} - {new Date(ecg.date).toLocaleDateString()}
+                              </p>
+                              <Badge 
+                                style={{ 
+                                  background: (ecg.result?.toLowerCase().includes('normal') && !ecg.result?.toLowerCase().includes('anormal')) ? '#E8F5F2' : '#FEE2E2',
+                                  color: (ecg.result?.toLowerCase().includes('normal') && !ecg.result?.toLowerCase().includes('anormal')) ? 'var(--accent-ai)' : 'var(--error)',
+                                  borderRadius: '6px',
+                                  border: 'none'
+                                }}
+                              >
+                                {ecg.result}
+                              </Badge>
+                            </div>
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                              {ecg.condition} • {new Date(ecg.date).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                        <Link to={`/ecg-analysis/${ecg.id}`}>
+                          <Button size="sm" variant="outline" style={{ borderRadius: '8px', borderColor: 'var(--border-color)' }}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Voir l'analyse
+                          </Button>
+                        </Link>
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Notes médicales Tab */}
+          {/* Notes médicales Tab (UI Only) */}
           <TabsContent value="notes" className="mt-6">
             <Card className="border-0 shadow-sm" style={{ borderRadius: '16px', background: 'var(--surface)', border: '1px solid var(--border-color)' }}>
               <CardContent className="p-6">
@@ -311,6 +290,6 @@ export default function DossierPatient() {
           </TabsContent>
         </Tabs>
       </div>
-    </MedecinLayout>
+    </DashboardLayout>
   );
 }
