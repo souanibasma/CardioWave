@@ -21,6 +21,8 @@ import AdminVerification  from './pages/AdminVerification';
 import AdminArticles      from './pages/AdminArticles';
 import AdminNotifications from './pages/AdminNotifications';
 import AttenteMedecin from './pages/AttenteMedecin';
+import VerifyEmail from './pages/VerifyEmail';
+import CompleteProfile from './pages/CompleteProfile';
 // Dans le tableau de routes :
 
 // ✅ Nouvelles pages Patient
@@ -49,6 +51,18 @@ export const router = createBrowserRouter([
   {
     path: '/attente-validation',
     element: <AttenteMedecin />,
+  },
+  {
+    path: '/verify-email',
+    element: <VerifyEmail />,
+  },
+  {
+    path: '/complete-profile',
+    element: (
+      <ProtectedRoute allowedRoles={['medecin']}>
+        <CompleteProfile />
+      </ProtectedRoute>
+    ),
   },
 
   // ✅ Routes Patient (protégées rôle "patient")

@@ -1,7 +1,10 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
+// Routes
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import adminRoutes from "./routes/adminRoutes";
@@ -14,8 +17,31 @@ import doctorDashboardRoutes from "./routes/doctorDashboardRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import ecgAnalysisRoutes from "./routes/ecgAnalysisRoutes";
 import chatRoutes from "./routes/chatRoutes";
+import chatbotRoutes from "./routes/chatbotRoutes";
+import reportRoutes from "./routes/reportRoutes";
+import doctorPatientsRoutes from "./routes/doctorPatients.routes";
+import ecgFileRoutes from "./routes/ecgFileRoutes";
 
 const app = express();
+
+// ✅ Sécurité
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false  // ✅ AJOUTER
+}));
+// ✅ Rate limiting global
+app.use(rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { message: "Trop de requêtes, réessaie dans 1 minute" }
+}));
+
+// ✅ Anti brute-force login
+app.use("/api/auth/login", rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Trop de tentatives, réessaie dans 15 minutes" }
+}));
 
 app.use(cors());
 app.use(express.json());
@@ -24,15 +50,10 @@ app.get("/", (_req, res) => {
   res.send("Backend is running");
 });
 
-// Ligne 33-34
+// ✅ Fichiers ECG protégés
+app.use("/uploads", ecgFileRoutes);
 
-// Static uploads
-app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // src/uploads
-app.use("/uploads", express.static(path.join(__dirname, "uploads/ecgs"))); // src/uploads/ecgs
-app.use("/uploads", express.static(path.join(__dirname, "../uploads"))); // root/uploads
-app.use("/uploads", express.static(path.join(__dirname, "../uploads/ecgs"))); // root/uploads/ecgs
-
-// Auth & core modules
+// Auth & core
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
@@ -40,35 +61,29 @@ app.use("/api/doctor", doctorRoutes);
 console.log("🔧 Mounting patient routes on /api/patient");
 app.use("/api/patient", patientRoutes);
 
-// ECG Upload
+// ECG
 app.use("/api/ecg", ecgAnalysisRoutes);
-
-// ECG Analysis
 app.use("/api/ecg-analysis", ecgAnalysisRoutes);
 
-// Doctor dashboard
+// Dashboard
 app.use("/api/doctor/dashboard", doctorDashboardRoutes);
 
-// Notifications (Admin & Doctor)
+// Notifications
 app.use("/api/notifications", notificationRoutes);
 
-// Admin article management
+// Articles
 app.use("/api/admin/articles", articleRoutes);
-
-// Public / doctor article reading, likes, comments
 app.use("/api/articles", publicArticleRoutes);
 
-import chatbotRoutes from "./routes/chatbotRoutes";
+// Chatbot & Chat
 app.use("/api/chatbot", chatbotRoutes);
-
 app.use("/api/chat", chatRoutes);
 
-import reportRoutes from "./routes/reportRoutes";
+// Reports
 app.use("/uploads/reports", express.static(path.join(__dirname, "reports")));
 app.use("/api/report", reportRoutes);
 
-// ── Nouveaux routes (flow patient → médecin) ──
-import doctorPatientsRoutes from "./routes/doctorPatients.routes";
+// Doctor patients
 app.use("/api/doctor", doctorPatientsRoutes);
 
 export default app;

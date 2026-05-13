@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function InscriptionPatient() {
   const [nom, setNom] = useState('');
@@ -18,8 +19,10 @@ export default function InscriptionPatient() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const { signup } = useAuth();
+  const { signup, googleLogin } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -48,9 +51,24 @@ export default function InscriptionPatient() {
         dateNaissance,
       });
 
-      window.location.href = '/connexion';
+      setShowSuccess(true);
+      setTimeout(() => {
+        navigate('/connexion');
+      }, 4000);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Une erreur est survenue.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      setIsLoading(true);
+      await googleLogin(credentialResponse.credential, "patient");
+      navigate('/patient/dashboard');
+    } catch (err: any) {
+      setError(err || 'Erreur Google Login.');
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +93,7 @@ export default function InscriptionPatient() {
           </div>
 
           <span style={s.logoText}>
-            Cardio<span style={{ color: '#6B35F5' }}>Wave</span>
+            Cardio<span style={{ color: '#4F46E5' }}>Wave</span>
           </span>
         </Link>
 
@@ -120,6 +138,15 @@ export default function InscriptionPatient() {
             </div>
           ))}
         </div>
+
+        {showSuccess && (
+          <div className="fade-up" style={{ width: '100%', maxWidth: 700, background: '#ECFDF5', padding: '20px 28px', borderRadius: 20, border: '1px solid #34D399', marginBottom: 20, textAlign: 'center' }}>
+            <h3 style={{ color: '#065F46', margin: '0 0 10px', fontSize: '1.2rem' }}>Inscription réussie !</h3>
+            <p style={{ color: '#047857', margin: 0, fontSize: '0.95rem' }}>
+              Un email de vérification vous a été envoyé. Veuillez vérifier votre boîte de réception pour activer votre compte.
+            </p>
+          </div>
+        )}
 
         <div className="fade-up" style={step === 1 ? s.cardInfo : s.cardSecurity}>
           <form onSubmit={handleSubmit}>
@@ -166,6 +193,22 @@ export default function InscriptionPatient() {
                 >
                   Continuer →
                 </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', margin: '12px 0' }}>
+                  <div style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }}></div>
+                  <span style={{ margin: '0 10px', fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>OU</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }}></div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setError('Échec de la connexion Google')}
+                    useOneTap
+                    theme="outline"
+                    shape="pill"
+                  />
+                </div>
               </div>
             )}
 
@@ -307,7 +350,7 @@ const CSS = `
   width:100%;
   height:52px;
   border-radius:16px;
-  border:1.5px solid rgba(107,53,245,.14);
+  border:1.5px solid rgba(79,70,229,.14);
   background:rgba(255,255,255,.92);
   padding:0 16px;
   outline:none;
@@ -319,8 +362,8 @@ const CSS = `
 }
 
 .cw-input:focus {
-  border-color:#6B35F5;
-  box-shadow:0 0 0 4px rgba(107,53,245,.10);
+  border-color:#4F46E5;
+  box-shadow:0 0 0 4px rgba(79,70,229,.10);
 }
 
 .cw-btn {
@@ -328,21 +371,21 @@ const CSS = `
   height:52px;
   border:none;
   border-radius:999px;
-  background:linear-gradient(135deg,#6B35F5,#9A35FF);
+  background:linear-gradient(135deg,#4F46E5,#7C3AED);
   color:white;
   font-weight:800;
   font-size:.95rem;
   cursor:pointer;
-  box-shadow:0 18px 38px rgba(106,53,245,.24);
+  box-shadow:0 18px 38px rgba(79,70,229,.24);
 }
 
 .cw-btn-ghost {
   height:52px;
   padding:0 26px;
   border-radius:999px;
-  border:1.5px solid rgba(107,53,245,.16);
+  border:1.5px solid rgba(79,70,229,.16);
   background:white;
-  color:#6B35F5;
+  color:#4F46E5;
   font-weight:700;
   cursor:pointer;
 }
@@ -354,14 +397,14 @@ const s: Record<string, CSSProperties> = {
     position: 'relative',
     overflow: 'hidden',
     fontFamily: "'DM Sans', sans-serif",
-    background: '#F8F5FF',
+    background: '#F5F7FF',
   },
 
   bgCanvas: {
     position: 'fixed',
     inset: 0,
     zIndex: 0,
-    background: 'linear-gradient(135deg,#F8F5FF 0%,#EEF0FF 45%,#E9E4FF 100%)',
+    background: 'linear-gradient(135deg,#F5F7FF 0%,#EEF0FF 45%,#E9E4FF 100%)',
   },
 
   blob: {
@@ -374,7 +417,7 @@ const s: Record<string, CSSProperties> = {
   blob1: {
     width: 540,
     height: 540,
-    background: '#C4B5FD',
+    background: '#A5B4FC',
     top: -140,
     left: -130,
   },
@@ -382,7 +425,7 @@ const s: Record<string, CSSProperties> = {
   blob2: {
     width: 420,
     height: 420,
-    background: '#A78BFA',
+    background: '#818CF8',
     right: -100,
     top: '30%',
   },
@@ -390,7 +433,7 @@ const s: Record<string, CSSProperties> = {
   blob3: {
     width: 360,
     height: 360,
-    background: '#E9D5FF',
+    background: '#DBEAFE',
     bottom: -90,
     left: '35%',
   },
@@ -417,11 +460,11 @@ const s: Record<string, CSSProperties> = {
     width: 38,
     height: 38,
     borderRadius: 12,
-    background: 'linear-gradient(135deg,#6B35F5 0%,#9A35FF 100%)',
+    background: 'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 12px 28px rgba(106,53,245,.25)',
+    boxShadow: '0 12px 28px rgba(79,70,229,.25)',
   },
 
   logoText: {
@@ -445,12 +488,12 @@ const s: Record<string, CSSProperties> = {
   navBtn: {
     padding: '10px 24px',
     borderRadius: 999,
-    background: 'linear-gradient(135deg,#6B35F5,#9A35FF)',
+    background: 'linear-gradient(135deg,#4F46E5,#7C3AED)',
     color: 'white',
     textDecoration: 'none',
     fontWeight: 800,
     fontSize: '.88rem',
-    boxShadow: '0 14px 30px rgba(106,53,245,.24)',
+    boxShadow: '0 14px 30px rgba(79,70,229,.24)',
   },
 
   centerWrap: {
@@ -506,13 +549,13 @@ const s: Record<string, CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     fontWeight: 900,
-    boxShadow: '0 10px 24px rgba(106,53,245,.16)',
+    boxShadow: '0 10px 24px rgba(79,70,229,.16)',
   },
 
   stepLine: {
     width: 80,
     height: 2,
-    background: 'rgba(107,53,245,.14)',
+    background: 'rgba(79,70,229,.14)',
     margin: '0 12px',
   },
 
@@ -523,8 +566,8 @@ const s: Record<string, CSSProperties> = {
     backdropFilter: 'blur(20px)',
     borderRadius: 30,
     padding: '30px 28px',
-    border: '1.5px solid rgba(107,53,245,.14)',
-    boxShadow: '0 24px 70px rgba(106,53,245,.12)',
+    border: '1.5px solid rgba(79,70,229,.14)',
+    boxShadow: '0 24px 70px rgba(79,70,229,.12)',
     boxSizing: 'border-box',
   },
 
@@ -536,8 +579,8 @@ const s: Record<string, CSSProperties> = {
     backdropFilter: 'blur(20px)',
     borderRadius: 30,
     padding: '42px 48px',
-    border: '1.5px solid rgba(107,53,245,.14)',
-    boxShadow: '0 24px 70px rgba(106,53,245,.12)',
+    border: '1.5px solid rgba(79,70,229,.14)',
+    boxShadow: '0 24px 70px rgba(79,70,229,.12)',
     boxSizing: 'border-box',
   },
 
@@ -551,7 +594,7 @@ const s: Record<string, CSSProperties> = {
     fontSize: '.82rem',
     fontWeight: 900,
     textTransform: 'uppercase',
-    color: '#6B35F5',
+    color: '#4F46E5',
     letterSpacing: '.6px',
   },
 
@@ -609,7 +652,7 @@ const s: Record<string, CSSProperties> = {
   },
 
   bottomLink: {
-    color: '#6B35F5',
+    color: '#4F46E5',
     fontWeight: 900,
     textDecoration: 'none',
   },

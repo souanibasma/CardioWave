@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 export default function Connexion() {
   const [email, setEmail] = useState('');
@@ -11,8 +12,9 @@ export default function Connexion() {
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
 
-  const { login } = useAuth();
+  const { login, googleLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -30,10 +32,48 @@ export default function Connexion() {
       else if (savedUser?.role === 'patient') navigate('/patient/dashboard');
       else if (savedUser?.role === 'admin') navigate('/admin/dashboard');
       else navigate('/tableau-de-bord');
-    } catch {
-      setError('Email ou mot de passe incorrect.');
+    } catch (err: any) {
+      if (err.requiresVerification) {
+        setError(err.message || 'Veuillez vérifier votre email.');
+        setShowResend(true);
+      } else {
+        setError(err || 'Email ou mot de passe incorrect.');
+        setShowResend(false);
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      setIsLoading(true);
+      const res = await googleLogin(credentialResponse.credential);
+      if (res.requiresProfileCompletion) {
+        navigate('/complete-profile');
+      } else if (res.requiresApproval) {
+        navigate('/attente-validation');
+      } else {
+        const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        if (savedUser?.role === 'patient') navigate('/patient/dashboard');
+        else if (savedUser?.role === 'admin') navigate('/admin/dashboard');
+        else navigate('/tableau-de-bord');
+      }
+    } catch (err: any) {
+      setError(err || 'Erreur Google Login.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    try {
+      const { resendVerificationEmail } = await import('../../services/api');
+      await resendVerificationEmail(email);
+      setError("Un nouveau lien a été envoyé. Vérifiez votre boîte de réception.");
+      setShowResend(false);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Erreur lors de l'envoi.");
     }
   };
 
@@ -56,7 +96,7 @@ export default function Connexion() {
           </div>
 
           <span style={s.logoText}>
-            Cardio<span style={{ color: '#6B35F5' }}>Wave</span>
+            Cardio<span style={{ color: '#4F46E5' }}>Wave</span>
           </span>
         </Link>
 
@@ -143,11 +183,36 @@ export default function Connexion() {
                 </button>
               </div>
 
-              {error && <div style={s.error}>{error}</div>}
+              {error && (
+                <div style={s.error}>
+                  {error}
+                  {showResend && (
+                    <div style={{ marginTop: 8 }}>
+                      <button type="button" onClick={handleResend} style={{...s.forgot, color: '#DC2626', textDecoration: 'underline'}}>Renvoyer le lien de vérification</button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button type="submit" disabled={isLoading} className="cw-btn">
                 {isLoading ? 'Connexion...' : 'Se connecter'}
               </button>
+              
+              <div style={{ display: 'flex', alignItems: 'center', margin: '8px 0' }}>
+                <div style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }}></div>
+                <span style={{ margin: '0 10px', fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>OU</span>
+                <div style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }}></div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSuccess}
+                  onError={() => setError('Échec de la connexion Google')}
+                  useOneTap
+                  theme="outline"
+                  shape="pill"
+                />
+              </div>
 
               <p style={s.footer}>
                 Vous n’avez pas de compte ?{' '}
@@ -241,7 +306,7 @@ body,
   width: 100%;
   height: 52px;
   border-radius: 16px;
-  border: 1.5px solid rgba(107,53,245,.14);
+  border: 1.5px solid rgba(79,70,229,.14);
   background: rgba(255,255,255,.92);
   padding: 0 16px 0 44px;
   outline: none;
@@ -253,8 +318,8 @@ body,
 }
 
 .cw-input:focus {
-  border-color: #6B35F5;
-  box-shadow: 0 0 0 4px rgba(107,53,245,.10);
+  border-color: #4F46E5;
+  box-shadow: 0 0 0 4px rgba(79,70,229,.10);
   background: #fff;
 }
 
@@ -268,19 +333,19 @@ body,
   height: 52px;
   border: none;
   border-radius: 999px;
-  background: linear-gradient(135deg,#6B35F5,#9A35FF);
+  background: linear-gradient(135deg,#4F46E5,#7C3AED);
   color: white;
   font-weight: 800;
   font-size: .96rem;
   cursor: pointer;
-  box-shadow: 0 18px 38px rgba(106,53,245,.24);
+  box-shadow: 0 18px 38px rgba(79,70,229,.24);
   font-family: 'DM Sans', sans-serif;
   transition: transform .2s, box-shadow .2s;
 }
 
 .cw-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 22px 46px rgba(106,53,245,.30);
+  box-shadow: 0 22px 46px rgba(79,70,229,.30);
 }
 
 .cw-btn:disabled {
@@ -299,7 +364,7 @@ const s: Record<string, CSSProperties> = {
     position: 'relative',
     overflow: 'hidden',
     fontFamily: "'DM Sans', sans-serif",
-    background: '#F8F5FF',
+    background: '#F5F7FF',
   },
 
   bgCanvas: {
@@ -307,7 +372,7 @@ const s: Record<string, CSSProperties> = {
     inset: 0,
     zIndex: 0,
     background:
-      'linear-gradient(135deg,#F8F5FF 0%,#EEF0FF 45%,#E9E4FF 100%)',
+      'linear-gradient(135deg,#F5F7FF 0%,#EEF0FF 45%,#E9E4FF 100%)',
   },
 
   blob: {
@@ -320,7 +385,7 @@ const s: Record<string, CSSProperties> = {
   blob1: {
     width: 540,
     height: 540,
-    background: '#C4B5FD',
+    background: '#A5B4FC',
     top: -140,
     left: -130,
   },
@@ -328,7 +393,7 @@ const s: Record<string, CSSProperties> = {
   blob2: {
     width: 420,
     height: 420,
-    background: '#A78BFA',
+    background: '#818CF8',
     right: -100,
     top: '30%',
   },
@@ -336,7 +401,7 @@ const s: Record<string, CSSProperties> = {
   blob3: {
     width: 360,
     height: 360,
-    background: '#E9D5FF',
+    background: '#DBEAFE',
     bottom: -90,
     left: '35%',
   },
@@ -363,11 +428,11 @@ const s: Record<string, CSSProperties> = {
     height: 38,
     borderRadius: 12,
     background:
-      'linear-gradient(135deg,#6B35F5 0%,#9A35FF 100%)',
+      'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 12px 28px rgba(106,53,245,.25)',
+    boxShadow: '0 12px 28px rgba(79,70,229,.25)',
   },
 
   logoText: {
@@ -392,14 +457,14 @@ const s: Record<string, CSSProperties> = {
     padding: '10px 24px',
     borderRadius: 999,
     background:
-      'linear-gradient(135deg,#6B35F5,#9A35FF)',
+      'linear-gradient(135deg,#4F46E5,#7C3AED)',
     color: 'white',
     border: 'none',
     cursor: 'pointer',
     textDecoration: 'none',
     fontWeight: 800,
     fontSize: '.88rem',
-    boxShadow: '0 14px 30px rgba(106,53,245,.24)',
+    boxShadow: '0 14px 30px rgba(79,70,229,.24)',
   },
 
   centerWrap: {
@@ -443,8 +508,8 @@ const s: Record<string, CSSProperties> = {
     backdropFilter: 'blur(20px)',
     borderRadius: 30,
     padding: '34px 32px',
-    border: '1.5px solid rgba(107,53,245,.14)',
-    boxShadow: '0 24px 70px rgba(106,53,245,.12)',
+    border: '1.5px solid rgba(79,70,229,.14)',
+    boxShadow: '0 24px 70px rgba(79,70,229,.12)',
   },
 
   stack: {
@@ -457,7 +522,7 @@ const s: Record<string, CSSProperties> = {
     fontSize: '.82rem',
     fontWeight: 900,
     textTransform: 'uppercase',
-    color: '#6B35F5',
+    color: '#4F46E5',
     letterSpacing: '.6px',
   },
 
@@ -505,7 +570,7 @@ const s: Record<string, CSSProperties> = {
     alignSelf: 'flex-end',
     border: 'none',
     background: 'transparent',
-    color: '#6B35F5',
+    color: '#4F46E5',
     fontSize: '.82rem',
     fontWeight: 800,
     cursor: 'pointer',
@@ -534,7 +599,7 @@ const s: Record<string, CSSProperties> = {
   footerBtn: {
     border: 'none',
     background: 'transparent',
-    color: '#6B35F5',
+    color: '#4F46E5',
     fontSize: '.86rem',
     fontWeight: 900,
     cursor: 'pointer',

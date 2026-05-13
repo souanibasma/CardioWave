@@ -14,6 +14,21 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+export const verifyEmailToken = async (token: string) => {
+  const res = await API.post("/auth/verify-email", { token });
+  return res.data;
+};
+
+export const resendVerificationEmail = async (email: string) => {
+  const res = await API.post("/auth/resend-verification", { email });
+  return res.data;
+};
+
+export const completeDoctorProfile = async (data: { userId: string, specialty: string, licenseNumber: string, hospitalOrClinic?: string }) => {
+  const res = await API.post("/auth/complete-profile", data);
+  return res.data;
+};
+
 export default API;
 
 /* =========================
@@ -403,11 +418,6 @@ export const getDoctorMyPatients = async () => {
   return res.data;
 };
 
-export const getDoctorPatientDetails = async (id: string) => {
-  const res = await API.get(`/doctor/patients/${id}`);
-  return res.data;
-};
-
 export const askMedicalChatbot = async (
   question: string,
   history: { question: string; answer: string }[] = []
@@ -423,18 +433,6 @@ export const askMedicalChatbot = async (
     answer: cleanAnswer(data.answer || ""),
     sources: extractSources(data.answer || ""),
   };
-};
-
-export const chatWithECG = async (
-  analysisId: string,
-  message: string,
-  history: { role: string; content: string }[] = []
-) => {
-  const response = await API.post(`/chat/${analysisId}`, {
-    message,
-    history,
-  });
-  return response.data;
 };
 /* =========================
    ECG ANALYSIS (CONTRACT)
@@ -478,102 +476,69 @@ export async function generateReport(id: string, chatSummary?: string) {
   return data;
 }
 
-export async function deleteECGAnalysis(id: string) {
-  const { data } = await API.delete(`/ecg-analysis/${id}`);
-  return data;
-}
-
 /**
  * Resolves image URLs based on source:
  * - http://localhost:8000/... → strip host prefix then re-add (normalize port)
  * - /files/... or files/...  → FastAPI Digitization (port 8000)
  * - uploads/...              → Node.js Backend (port 5000)
  */
-export function getImageUrl(rawPath: string) {
+export function getImageUrl(rawPath: string): string {
   if (!rawPath) return "";
 
-  // If full URL from FastAPI (stored as http://localhost:8000/files/...)
-  // strip the host part and let the logic below re-add it consistently
   if (rawPath.startsWith("http://localhost:8000")) {
     rawPath = rawPath.replace("http://localhost:8000", "");
   }
 
-  // Already an absolute http URL (other host) → return as-is
   if (rawPath.startsWith("http")) return rawPath;
 
-  // FastAPI digitization source: paths containing /files/ or starting with files/
   if (rawPath.includes("/files/") || rawPath.startsWith("files/")) {
     const cleanPath = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
     return `http://localhost:8000${cleanPath}`;
   }
 
-  // Node.js backend source (uploads/)
   let cleanPath = rawPath.replace(/\\/g, "/");
-
-  // Rule 1: patient ECG files ("ecg-*.png") live at the root of /uploads
   const fileName = cleanPath.split("/").pop() || "";
+
   if (fileName.startsWith("ecg-")) {
     cleanPath = `uploads/${fileName}`;
-  }
-  // Rule 2: other files — ensure they have the ecgs/ sub-directory
-  else if (cleanPath.startsWith("uploads/") && !cleanPath.startsWith("uploads/ecgs/")) {
+  } else if (cleanPath.startsWith("uploads/") && !cleanPath.startsWith("uploads/ecgs/")) {
     cleanPath = cleanPath.replace("uploads/", "uploads/ecgs/");
   }
 
   const normalizedPath = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
   return `http://localhost:5000${normalizedPath}`;
 }
-function extractSources(answer: string): { name: string; url: string }[] {
-  const sources: { name: string; url: string }[] = [];
+
+
+function extractSources(answer: string): string[] {
+  const sources: string[] = [];
   let foundSourceLine = false;
 
   for (const line of answer.split("\n")) {
-    const l = line.trim();
-    const lowerL = l.toLowerCase();
-    
-    if (lowerL.startsWith("sources :") || lowerL.startsWith("sources:")) {
+    const l = line.toLowerCase().trim();
+    if (l.startsWith("sources :") || l.startsWith("sources:")) {
       foundSourceLine = true;
-      const part = l
+      const part = line
         .split(":")
         .slice(1)
         .join(":")
         .replace(/[\[\]]/g, "")
         .trim();
 
-      if (!part) continue;
-
       part.split(",").forEach((s) => {
         const clean = s.trim();
-        if (!clean) return;
-
-        // Try to find a URL in the segment
-        const urlRegex = /(https?:\/\/[^\s\)]+)/;
-        const urlMatch = clean.match(urlRegex);
-
-        if (urlMatch) {
-          const url = urlMatch[1];
-          // Name is everything before the URL or the URL itself if no name
-          let name = clean.replace(url, "").replace(/[\(\)]/g, "").trim();
-          if (!name) {
-            // Extract domain as name if no name provided
-            try {
-              name = new URL(url).hostname.replace("www.", "");
-            } catch {
-              name = "Lien";
-            }
-          }
-          sources.push({ name, url });
-        } else if (clean.length > 2) {
-          sources.push({
-            name: clean,
-            url: `https://www.google.com/search?q=${encodeURIComponent(clean)}`
-          });
+        if (clean && clean.length > 1) {
+          sources.push(clean);
         }
       });
     }
   }
 
-  return sources;
+  if (!foundSourceLine) {
+    return [];
+  }
+
+  return [...new Set(sources)];
 }
 function cleanAnswer(answer: string): string {
   return answer
@@ -587,3 +552,25 @@ function cleanAnswer(answer: string): string {
     .join("\n")
     .trim();
 }
+
+export const chatWithECG = async (
+  analysisId: string,
+  message: string,
+  history: { role?: string; content?: string; question?: string; answer?: string }[] = []
+) => {
+  const res = await API.post(`/ecg-analysis/${analysisId}/chat`, {
+    message,
+    history,
+  });
+  return res.data;
+};
+
+export const getDoctorPatientDetails = async (patientId: string) => {
+  const res = await API.get(`/doctor/patients/${patientId}`);
+  return res.data;
+};
+
+export const deleteECGAnalysis = async (id: string) => {
+  const res = await API.delete(`/ecg-analysis/${id}`);
+  return res.data;
+};

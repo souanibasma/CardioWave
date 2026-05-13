@@ -301,6 +301,7 @@ export default function ECGAnalysis() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+const [resolvedImageUrl, setResolvedImageUrl] = useState<string>("");
 
   const handleExportReport = async () => {
     const analysisId = analysis?._id || id;
@@ -370,7 +371,22 @@ export default function ECGAnalysis() {
   useEffect(() => {
     fetchAnalysis();
   }, [id]);
+  useEffect(() => {
+    fetchAnalysis();
+}, [id]);
 
+  // ✅ AJOUTE CE BLOC ICI
+  useEffect(() => {
+      if (!analysis?.ecg?.originalImage) return;
+      const fileName = analysis.ecg.originalImage.split("/").pop();
+      const token = localStorage.getItem("token");
+      fetch(`http://localhost:5000/uploads/ecgs/${fileName}`, {
+          headers: { Authorization: `Bearer ${token}` }
+      })
+          .then(res => res.blob())
+          .then(blob => setResolvedImageUrl(URL.createObjectURL(blob)))
+          .catch(err => console.error("Image fetch error:", err));
+  }, [analysis]);
   useEffect(() => {
     let interval: any;
 
@@ -850,7 +866,7 @@ export default function ECGAnalysis() {
 
                   <div className="p-6">
                     <div 
-                      onClick={() => setZoomedImage(imageUrl)}
+                      onClick={() => setZoomedImage(resolvedImageUrl || imageUrl)}
                       className="group relative rounded-[28px] overflow-hidden border border-slate-200 cursor-zoom-in"
                     >
                       <div className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/20 transition-all flex items-center justify-center z-10">
@@ -858,9 +874,9 @@ export default function ECGAnalysis() {
                           <ZoomIn className="text-slate-900" size={24} />
                         </div>
                       </div>
-                      <img
-                        src={imageUrl}
-                        className="w-full max-h-[400px] object-contain bg-white transition-transform duration-500 group-hover:scale-105"
+                       <img
+                          src={resolvedImageUrl || imageUrl}
+                          className="w-full max-h-[400px] object-contain bg-white transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
                   </div>

@@ -22,6 +22,7 @@ interface AuthContextType {
   pendingUser: User | null;
   isPending: boolean;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (idToken: string, role?: string) => Promise<any>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -121,7 +122,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("pendingUser");
       setPendingUser(null);
     } catch (error: any) {
+      if (error?.response?.data?.requiresVerification) {
+        throw { requiresVerification: true, message: error.response.data.message };
+      }
       throw error?.response?.data?.message || "Email ou mot de passe incorrect.";
+    }
+  };
+
+  const googleLogin = async (idToken: string, role?: string): Promise<any> => {
+    try {
+      const res = await API.post("/auth/google", { idToken, role });
+
+      if (res.data.requiresProfileCompletion) {
+         // store partial user info and let UI redirect to /complete-profile
+         localStorage.setItem("user", JSON.stringify(res.data.user));
+         return { requiresProfileCompletion: true };
+      }
+
+      if (res.data.requiresApproval) {
+        const mappedUser = mapBackendUserToFrontendUser(res.data.user);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+
+        localStorage.setItem("pendingUser", JSON.stringify(mappedUser));
+        setPendingUser(mappedUser);
+        return { requiresApproval: true };
+      }
+
+      localStorage.setItem("token", res.data.token);
+      const mappedUser = mapBackendUserToFrontendUser(res.data.user);
+      localStorage.setItem("user", JSON.stringify(mappedUser));
+      setUser(mappedUser);
+      if (mappedUser.id) {
+        connectSocket(mappedUser.id);
+      }
+      localStorage.removeItem("pendingUser");
+      setPendingUser(null);
+      return { success: true };
+    } catch (error: any) {
+      throw error?.response?.data?.message || "Erreur Google Login";
     }
   };
 
@@ -172,6 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingUser,
         isPending: !!pendingUser && !user,
         login,
+        googleLogin,
         signup,
         logout,
         isAuthenticated: !!user,

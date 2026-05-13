@@ -1,8 +1,9 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { Request } from "express";
-
+// ✅ Ajoute NextFunction ici
+import { Request, Response, NextFunction } from "express";
+import { encryptFile } from "../utils/ecgCrypto";
 const uploadDir = path.join(__dirname, "../uploads/ecgs");
 
 if (!fs.existsSync(uploadDir)) {
@@ -44,4 +45,16 @@ const uploadECGFile = multer({
   },
 });
 
+// Ajoute ce middleware APRÈS uploadECGFile
+export const encryptAfterUpload = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (req.file) {
+    encryptFile(req.file.path);  // chiffre le fichier sur disque
+    console.log("🔒 Fichier ECG chiffré :", req.file.filename);
+  }
+  next();
+};
 export default uploadECGFile;

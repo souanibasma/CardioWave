@@ -6,6 +6,10 @@ export interface IUser extends Document {
   password: string;
   role: "admin" | "doctor" | "patient";
   isApproved: boolean;
+  isEmailVerified: boolean;
+  verificationToken?: string;
+  verificationExpires?: Date;
+  googleId?: string;
 
   // Patient fields
   phone?: string;
@@ -52,10 +56,24 @@ const userSchema = new Schema<IUser>(
       default: "patient",
     },
 
-    
-      isApproved: {
+    isApproved: {
       type: Boolean,
       default: false,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationToken: {
+      type: String,
+    },
+    verificationExpires: {
+      type: Date,
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
 
     // Patient fields

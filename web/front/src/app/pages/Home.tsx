@@ -50,7 +50,7 @@ const CARDS = [
 const FOR_WHO = [
   {
     icon: (
-      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#6B35F5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#4F46E5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
@@ -59,23 +59,23 @@ const FOR_WHO = [
     ),
     label: 'Médecins',
     link: '/inscription',
-    color: '#6B35F5',
-    bg: 'rgba(107,53,245,0.08)',
-    border: 'rgba(107,53,245,0.16)',
+    color: '#4F46E5',
+    bg: 'rgba(79,70,229,0.08)',
+    border: 'rgba(79,70,229,0.16)',
     desc: 'Accédez à une analyse rapide et fiable de chaque ECG. Notre IA vous apporte une aide au diagnostic pour réduire votre charge cognitive et améliorer la qualité de soins.',
     tags: ['Aide au diagnostic', 'Gain de temps', 'Précision'],
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#6B35F5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#4F46E5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
       </svg>
     ),
     label: 'Patients',
     link: '/inscription-patient',
-    color: '#6B35F5',
-    bg: 'rgba(107,53,245,0.08)',
-    border: 'rgba(107,53,245,0.16)',
+    color: '#4F46E5',
+    bg: 'rgba(79,70,229,0.08)',
+    border: 'rgba(79,70,229,0.16)',
     desc: 'Suivez votre santé cardiaque de façon simple et visuelle. Recevez des rapports clairs et des alertes personnalisées pour rester informé en toute tranquillité.',
     tags: ['Suivi personnel', 'Alertes', 'Rapports clairs'],
   },
@@ -90,14 +90,12 @@ export default function Home() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&display=swap');
 
-        html { scroll-behavior: smooth; }
-
-        @keyframes heartbeat {
-          0%,100% { transform:scale(1); filter:drop-shadow(0 8px 24px rgba(107,53,245,.26)); }
-          10% { transform:scale(1.28); filter:drop-shadow(0 14px 40px rgba(154,53,255,.45)); }
-          20% { transform:scale(1.05); filter:drop-shadow(0 8px 24px rgba(107,53,245,.28)); }
-          35% { transform:scale(1.18); filter:drop-shadow(0 10px 32px rgba(232,121,249,.36)); }
-          55% { transform:scale(1); filter:drop-shadow(0 8px 24px rgba(107,53,245,.26)); }
+         @keyframes heartbeat {
+          0%,100% { transform:scale(1); filter:drop-shadow(0 8px 24px rgba(79,70,229,.26)); }
+          10% { transform:scale(1.28); filter:drop-shadow(0 14px 40px rgba(124,58,237,.45)); }
+          20% { transform:scale(1.05); filter:drop-shadow(0 8px 24px rgba(79,70,229,.28)); }
+          35% { transform:scale(1.18); filter:drop-shadow(0 10px 32px rgba(59,130,246,.36)); }
+          55% { transform:scale(1); filter:drop-shadow(0 8px 24px rgba(79,70,229,.26)); }
         }
 
         @keyframes expandRing {
@@ -132,7 +130,7 @@ export default function Home() {
         .ring-3 { animation:expandRing 2s ease-out infinite 1.9s; }
 
         .ecg-line {
-          stroke:rgba(107,53,245,.58);
+          stroke:rgba(79,70,229,.58);
           stroke-width:2;
           fill:none;
           stroke-dasharray:600;
@@ -173,18 +171,18 @@ export default function Home() {
         .sol-card {
           background:rgba(255,255,255,.78);
           backdrop-filter:blur(18px);
-          border:1px solid rgba(107,53,245,.14);
+          border:1px solid rgba(79,70,229,.14);
           border-radius:24px;
           padding:32px 28px;
           cursor:default;
-          box-shadow:0 18px 44px rgba(106,53,245,.08);
+          box-shadow:0 18px 44px rgba(79,70,229,.08);
           transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
         }
 
         .sol-card:hover {
           transform:translateY(-6px);
-          box-shadow:0 22px 55px rgba(106,53,245,.16);
-          border-color:rgba(107,53,245,.26);
+          box-shadow:0 22px 55px rgba(79,70,229,.16);
+          border-color:rgba(79,70,229,.26);
         }
 
         .who-card {
@@ -196,13 +194,13 @@ export default function Home() {
 
         .who-card:hover {
           transform:translateY(-5px);
-          box-shadow:0 18px 48px rgba(106,53,245,.14);
+          box-shadow:0 18px 48px rgba(79,70,229,.14);
         }
 
         .cw-input {
           width:100%;
           padding:14px 18px;
-          border:1.5px solid rgba(107,53,245,.14);
+          border:1.5px solid rgba(79,70,229,.14);
           border-radius:16px;
           font-size:.95rem;
           font-family:'DM Sans',sans-serif;
@@ -213,8 +211,8 @@ export default function Home() {
         }
 
         .cw-input:focus {
-          border-color:#6B35F5;
-          box-shadow:0 0 0 4px rgba(107,53,245,.10);
+          border-color:#4F46E5;
+          box-shadow:0 0 0 4px rgba(79,70,229,.10);
         }
 
         .cw-input::placeholder { color:#A5A9C7; }
@@ -223,7 +221,7 @@ export default function Home() {
           width:60px;
           height:4px;
           border-radius:2px;
-          background:linear-gradient(90deg,#6B35F5,#E879F9);
+          background:linear-gradient(90deg,#4F46E5,#3B82F6);
           margin:0 auto 20px;
         }
 
@@ -233,9 +231,10 @@ export default function Home() {
           border-radius:50px;
           font-size:.74rem;
           font-weight:700;
-          background:rgba(107,53,245,.08);
-          color:#6B35F5;
-          border:1px solid rgba(107,53,245,.15);
+          background:rgba(79,70,229,.08);
+          color:#4F46E5;
+          border:1px solid rgba(79,70,229,.15);
+        }:1px solid rgba(107,53,245,.15);
         }
       `}</style>
 
@@ -256,7 +255,7 @@ export default function Home() {
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
             </svg>
           </div>
-          Cardio<span style={{ color: '#6B35F5' }}>Wave</span>
+          Cardio<span style={{ color: '#4F46E5' }}>Wave</span>
         </div>
 
         <div style={styles.navLinks}>
@@ -275,7 +274,7 @@ export default function Home() {
 
           <h1 style={styles.title}>
             Rapide, Efficace<br />
-            et <span style={{ color: '#6B35F5' }}>Productif</span><br />
+            et <span style={{ color: '#4F46E5' }}>Productif</span><br />
             pour votre cœur
           </h1>
 
@@ -408,7 +407,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="pourqui" style={{ ...styles.section, background: 'linear-gradient(180deg,#F8F5FF 0%,#FFFFFF 100%)' }}>
+      <section id="pourqui" style={{ ...styles.section, background: 'linear-gradient(180deg,#F5F7FF 0%,#FFFFFF 100%)' }}>
         <div style={styles.sectionInner}>
           <div className="reveal" style={{ textAlign: 'center', marginBottom: 56 }}>
             <div className="section-divider" />
@@ -426,7 +425,7 @@ export default function Home() {
                 style={{
                   background: 'rgba(255,255,255,0.74)',
                   border: `1.5px solid ${w.border}`,
-                  boxShadow: `0 18px 48px rgba(106,53,245,0.10)`,
+                  boxShadow: `0 18px 48px rgba(79,70,229,0.10)`,
                 }}
               >
                 <div style={{ ...styles.whoIconWrap, background: w.bg, border: `1.5px solid ${w.border}` }}>
@@ -448,7 +447,7 @@ export default function Home() {
                   <button
                     onClick={() => navigate(w.link)}
                     style={{
-                      background: 'linear-gradient(135deg,#6B35F5 0%,#9A35FF 100%)',
+                      background: 'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)',
                       color: 'white',
                       border: 'none',
                       padding: '10px 22px',
@@ -456,7 +455,7 @@ export default function Home() {
                       fontSize: '.85rem',
                       fontWeight: 800,
                       cursor: 'pointer',
-                      boxShadow: '0 14px 28px rgba(106,53,245,0.22)',
+                      boxShadow: '0 14px 28px rgba(79,70,229,0.22)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 6,
@@ -511,7 +510,7 @@ export default function Home() {
                 <div style={styles.aboutCardHeader}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }} />
-                    <span style={{ fontSize: '.8rem', fontWeight: 800, color: '#6B35F5' }}>Analyse en cours</span>
+                    <span style={{ fontSize: '.8rem', fontWeight: 800, color: '#4F46E5' }}>Analyse en cours</span>
                   </div>
                   <span style={{ fontSize: '.75rem', color: '#A5A9C7' }}>Patient #3821</span>
                 </div>
@@ -520,7 +519,7 @@ export default function Home() {
                   <polyline
                     points="0,40 30,40 42,12 52,68 62,12 74,68 86,40 120,40 132,12 142,68 152,12 164,68 176,40 210,40 222,12 232,68 242,12 254,68 266,40 320,40"
                     fill="none"
-                    stroke="#6B35F5"
+                    stroke="#4F46E5"
                     strokeWidth="2.5"
                     strokeLinejoin="round"
                     strokeLinecap="round"
@@ -572,7 +571,7 @@ export default function Home() {
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
             </svg>
           </div>
-          <span style={{ ...styles.footerText, fontWeight: 800, color: '#6B35F5' }}>CardioWave</span>
+          <span style={{ ...styles.footerText, fontWeight: 800, color: '#4F46E5' }}>CardioWave</span>
         </div>
 
         <div style={{ display: 'flex', gap: 28 }}>
@@ -595,14 +594,14 @@ root: {
   display: 'flex',
   flexDirection: 'column',
   fontFamily: "'DM Sans','Segoe UI',sans-serif",
-  background: '#F8F5FF',
+  background: '#F5F7FF',
 },
 
   bgCanvas: {
     position: 'fixed',
     inset: 0,
     zIndex: 0,
-    background: 'linear-gradient(135deg,#F8F5FF 0%,#EEF0FF 45%,#E9E4FF 100%)',
+    background: 'linear-gradient(135deg,#F5F7FF 0%,#EEF0FF 45%,#E9E4FF 100%)',
     pointerEvents: 'none',
     overflow: 'hidden',
   },
@@ -633,7 +632,7 @@ root: {
   blob1: {
     width: 560,
     height: 560,
-    background: '#C4B5FD',
+    background: '#A5B4FC',
     top: -150,
     left: -130,
   },
@@ -641,7 +640,7 @@ root: {
   blob2: {
     width: 430,
     height: 430,
-    background: '#A78BFA',
+    background: '#818CF8',
     top: '28%',
     right: -110,
   },
@@ -649,7 +648,7 @@ root: {
   blob3: {
     width: 360,
     height: 360,
-    background: '#E9D5FF',
+    background: '#DBEAFE',
     bottom: -100,
     left: '32%',
   },
@@ -664,8 +663,8 @@ root: {
     padding: '18px 56px',
     background: 'rgba(255,255,255,0.50)',
     backdropFilter: 'blur(22px)',
-    borderBottom: '1px solid rgba(107,53,245,0.12)',
-    boxShadow: '0 10px 35px rgba(106,53,245,0.06)',
+    borderBottom: '1px solid rgba(79,70,229,0.12)',
+    boxShadow: '0 10px 35px rgba(79,70,229,0.06)',
   },
 
   logo: {
@@ -680,12 +679,12 @@ root: {
   logoIcon: {
     width: 36,
     height: 36,
-    background: 'linear-gradient(135deg,#5B4FE9 0%,#9A35FF 100%)',
+    background: 'linear-gradient(135deg,#4338CA 0%,#7C3AED 100%)',
     borderRadius: 12,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 12px 28px rgba(106,53,245,0.25)',
+    boxShadow: '0 12px 28px rgba(79,70,229,0.25)',
   },
 
   navLinks: {
@@ -702,7 +701,7 @@ root: {
   },
 
   navCta: {
-    background: 'linear-gradient(135deg,#6B35F5 0%,#9A35FF 100%)',
+    background: 'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)',
     color: 'white',
     padding: '10px 24px',
     borderRadius: 50,
@@ -710,7 +709,7 @@ root: {
     cursor: 'pointer',
     fontSize: '0.88rem',
     fontWeight: 800,
-    boxShadow: '0 14px 30px rgba(106,53,245,0.24)',
+    boxShadow: '0 14px 30px rgba(79,70,229,0.24)',
   },
 
 hero: {
@@ -738,9 +737,9 @@ hero: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 8,
-    background: 'rgba(107,53,245,0.08)',
-    border: '1px solid rgba(107,53,245,0.18)',
-    color: '#6B35F5',
+    background: 'rgba(79,70,229,0.08)',
+    border: '1px solid rgba(79,70,229,0.18)',
+    color: '#4F46E5',
     fontSize: '0.76rem',
     fontWeight: 800,
     padding: '7px 17px',
@@ -772,7 +771,7 @@ fontFamily: "'DM Sans', sans-serif",
   },
 
   btnPrimary: {
-    background: 'linear-gradient(135deg,#6B35F5 0%,#9A35FF 100%)',
+    background: 'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)',
     color: 'white',
     padding: '14px 34px',
     borderRadius: 50,
@@ -780,7 +779,7 @@ fontFamily: "'DM Sans', sans-serif",
     cursor: 'pointer',
     fontSize: '0.95rem',
     fontWeight: 800,
-    boxShadow: '0 18px 38px rgba(106,53,245,0.24)',
+    boxShadow: '0 18px 38px rgba(79,70,229,0.24)',
   },
 
   btnGhost: {
@@ -803,8 +802,8 @@ fontFamily: "'DM Sans', sans-serif",
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 12px 26px rgba(106,53,245,0.13)',
-    border: '1px solid rgba(107,53,245,0.14)',
+    boxShadow: '0 12px 26px rgba(79,70,229,0.13)',
+    border: '1px solid rgba(79,70,229,0.14)',
   },
 
   statsRow: {
@@ -834,7 +833,7 @@ fontFamily: "'DM Sans', sans-serif",
   statDivider: {
     width: 1,
     height: 42,
-    background: 'rgba(107,53,245,0.16)',
+    background: 'rgba(79,70,229,0.16)',
   },
 
   heroRight: {
@@ -859,7 +858,7 @@ fontFamily: "'DM Sans', sans-serif",
     width: 260,
     height: 260,
     borderRadius: '50%',
-    background: 'radial-gradient(circle,rgba(154,53,255,0.42) 0%,rgba(196,181,253,0.24) 50%,transparent 78%)',
+    background: 'radial-gradient(circle,rgba(124,58,237,0.42) 0%,rgba(165,180,252,0.24) 50%,transparent 78%)',
     filter: 'blur(32px)',
     zIndex: 0,
     pointerEvents: 'none',
@@ -871,17 +870,17 @@ fontFamily: "'DM Sans', sans-serif",
     left: 16,
     background: 'rgba(255,255,255,0.82)',
     backdropFilter: 'blur(16px)',
-    border: '1px solid rgba(107,53,245,0.16)',
+    border: '1px solid rgba(79,70,229,0.16)',
     borderRadius: 50,
     padding: '6px 14px',
     fontSize: '0.76rem',
     fontWeight: 800,
-    color: '#6B35F5',
+    color: '#4F46E5',
     display: 'flex',
     alignItems: 'center',
     gap: 6,
     zIndex: 10,
-    boxShadow: '0 8px 24px rgba(106,53,245,0.10)',
+    boxShadow: '0 8px 24px rgba(79,70,229,0.10)',
   },
 
   liveDot: {
@@ -903,8 +902,8 @@ fontFamily: "'DM Sans', sans-serif",
 ring: {
   position: 'absolute',
   borderRadius: '50%',
-  border: '2px solid #873fb1',
-  boxShadow: '0 0 25px rgba(72, 5, 132, 0.6)',
+  border: '2px solid #4F46E5',
+  boxShadow: '0 0 25px rgba(15, 23, 42, 0.6)',
 },
 
   ecgOverlay: {
@@ -948,7 +947,7 @@ ring: {
     width: 48,
     height: 4,
     borderRadius: 2,
-    background: 'linear-gradient(90deg,#6B35F5,#E879F9)',
+    background: 'linear-gradient(90deg,#4F46E5,#3B82F6)',
     marginBottom: 16,
   },
 
@@ -1016,8 +1015,8 @@ ring: {
     display: 'flex',
     gap: 16,
     alignItems: 'flex-start',
-    background: 'rgba(107,53,245,0.07)',
-    border: '1px solid rgba(107,53,245,0.14)',
+    background: 'rgba(79,70,229,0.07)',
+    border: '1px solid rgba(79,70,229,0.14)',
     borderRadius: 18,
     padding: '20px 22px',
   },
@@ -1025,7 +1024,7 @@ ring: {
   missionLabel: {
     fontSize: '0.78rem',
     fontWeight: 900,
-    color: '#6B35F5',
+    color: '#4F46E5',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
     marginBottom: 6,
@@ -1049,8 +1048,8 @@ ring: {
     backdropFilter: 'blur(20px)',
     borderRadius: 28,
     padding: '28px 28px 20px',
-    border: '1.5px solid rgba(107,53,245,0.14)',
-    boxShadow: '0 28px 70px rgba(106,53,245,0.13)',
+    border: '1.5px solid rgba(79,70,229,0.14)',
+    boxShadow: '0 28px 70px rgba(79,70,229,0.13)',
     width: '100%',
     maxWidth: 460,
   },
@@ -1108,8 +1107,8 @@ ring: {
     backdropFilter: 'blur(16px)',
     borderRadius: 16,
     padding: '10px 16px',
-    boxShadow: '0 14px 32px rgba(106,53,245,0.14)',
-    border: '1px solid rgba(107,53,245,0.12)',
+    boxShadow: '0 14px 32px rgba(79,70,229,0.14)',
+    border: '1px solid rgba(79,70,229,0.12)',
     fontSize: '1.2rem',
     fontWeight: 900,
     color: '#101653',
@@ -1127,8 +1126,8 @@ ring: {
     backdropFilter: 'blur(20px)',
     borderRadius: 30,
     padding: '48px 48px 40px',
-    border: '1.5px solid rgba(107,53,245,0.14)',
-    boxShadow: '0 24px 70px rgba(106,53,245,0.12)',
+    border: '1.5px solid rgba(79,70,229,0.14)',
+    boxShadow: '0 24px 70px rgba(79,70,229,0.12)',
     display: 'flex',
     flexDirection: 'column',
     gap: 22,
@@ -1157,7 +1156,7 @@ ring: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg,#6B35F5 0%,#9A35FF 100%)',
+    background: 'linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%)',
     color: 'white',
     border: 'none',
     padding: '15px 36px',
@@ -1166,7 +1165,7 @@ ring: {
     fontSize: '1rem',
     fontWeight: 800,
     alignSelf: 'center',
-    boxShadow: '0 18px 38px rgba(106,53,245,0.24)',
+    boxShadow: '0 18px 38px rgba(79,70,229,0.24)',
     marginTop: 4,
   },
 
@@ -1182,7 +1181,7 @@ ring: {
     zIndex: 1,
     background: 'rgba(255,255,255,0.72)',
     backdropFilter: 'blur(18px)',
-    borderTop: '1px solid rgba(107,53,245,0.12)',
+    borderTop: '1px solid rgba(79,70,229,0.12)',
     padding: '22px 56px',
     display: 'flex',
     alignItems: 'center',

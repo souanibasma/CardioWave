@@ -203,15 +203,15 @@ export default function ChatbotIA() {
               style={{
                 position: 'absolute',
 
-                right: 140,
+                right: 200,
 
-                top: '52%',
+                top: '45%',
 
                 transform: 'translateY(-50%)',
 
-                width: 240,
+                width: 340,
 
-                height: 'auto',
+                height: 340,
 
                 objectFit: 'contain',
 
@@ -231,7 +231,7 @@ export default function ChatbotIA() {
               style={{
                 position: 'absolute',
 
-                top: 30,
+                top: 60,
 
                 right: 34,
 
