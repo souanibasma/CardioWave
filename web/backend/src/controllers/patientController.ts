@@ -174,7 +174,6 @@ export const getMyDoctor = async (
   }
 };
 
-// POST /api/patient/ecgs
 export const uploadPatientECG = async (
   req: AuthRequest,
   res: Response
@@ -191,7 +190,7 @@ export const uploadPatientECG = async (
     } : "undefined");
     console.log("👤 req.user:", req.user ? { _id: req.user._id, role: req.user.role } : "undefined");
 
-    const { title, urgency, notes } = req.body;
+    const { title, urgency, notes, doctorId: bodyDoctorId } = req.body;
 
     // ✅ Vérifier la présence du fichier uploadé par Multer
     const file = req.file;
@@ -215,15 +214,33 @@ export const uploadPatientECG = async (
       return;
     }
 
+    // ✅ Priorité au doctorId passé explicitement dans le body (évite race condition DB)
+    // Sinon fallback sur patient.assignedDoctor
+    const resolvedDoctorId = bodyDoctorId || patient.assignedDoctor;
+
+    // ✅ Si un doctorId est fourni, vérifier qu'il est bien approuvé
+    if (bodyDoctorId) {
+      const doctor = await User.findOne({
+        _id: bodyDoctorId,
+        role: "doctor",
+        isApproved: true,
+      });
+      if (!doctor) {
+        console.log("❌ Médecin introuvable ou non approuvé:", bodyDoctorId);
+        res.status(404).json({ message: "Médecin introuvable ou non approuvé" });
+        return;
+      }
+    }
+
     // ✅ Générer le chemin du fichier (source de vérité)
     const filePath = `uploads/ecgs/${file.filename}`;
 
     // ✅ Créer l'ECG avec les champs unifiés
     const ecg = await ECG.create({
       // Source de vérité
-      patient: patient._id,           // ✅ Unifié (plus de patientId séparé)
-      doctor: patient.assignedDoctor as any, // ✅ Unifié avec assertion TypeScript
-      originalImage: filePath,        // ✅ Unifié (plus de fileUrl séparé)
+      patient: patient._id,
+      doctor: resolvedDoctorId || null,
+      originalImage: filePath,
       
       // Métadonnées
       title,
@@ -234,15 +251,15 @@ export const uploadPatientECG = async (
     });
 
     // 🔔 Notification pour le médecin
-    if (patient.assignedDoctor) {
+    if (resolvedDoctorId) {
       await createNotification({
         recipientRole: "doctor",
-        recipientId: (patient.assignedDoctor as any)._id || patient.assignedDoctor,
+        recipientId: (resolvedDoctorId as any)._id?.toString() || resolvedDoctorId.toString(),
         type: "ecg_received",
         title: "Nouvel ECG reçu",
         description: `Le patient ${patient.fullName} vous a envoyé un nouvel ECG : ${title}`,
         actionLabel: "Voir l'ECG",
-        actionPath: `/ecg-recus`, // Ajustez le chemin selon votre front
+        actionPath: `/ecg-recus`,
         relatedUser: patient._id,
         relatedEcg: (ecg as any)._id,
       });

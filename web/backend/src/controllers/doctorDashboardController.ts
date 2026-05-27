@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 
 export const getDoctorDashboardOverview = async (req: Request, res: Response) => {
   try {
-    const doctorId = (req as any).user.id;
+    const doctorId = (req as any).user._id;
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -34,10 +34,10 @@ export const getDoctorDashboardOverview = async (req: Request, res: Response) =>
 
 export const getDoctorRecentECGs = async (req: Request, res: Response) => {
   try {
-    const doctorId = (req as any).user.id;
+    const doctorId = (req as any).user._id;
     const ecgs = await ECG.find({ doctor: doctorId })
       .sort({ createdAt: -1 })
-      .limit(5)
+      .limit(2)
       .populate('patient', 'fullName prenom nom dateOfBirth phone');
 
     const formatted = ecgs.map(e => {
@@ -49,12 +49,22 @@ export const getDoctorRecentECGs = async (req: Request, res: Response) => {
         age = now.getFullYear() - birth.getFullYear();
       }
 
+      let statut = e.status === 'Anormal' ? 'Anormal' : (e.status === 'Normal' ? 'Normal' : 'En attente');
+      if (statut === 'Anormal' && e.diagnosis && (
+        e.diagnosis.toLowerCase().includes('rythme sinusal normal') ||
+        e.diagnosis.toLowerCase().includes('normal sinus rhythm') ||
+        e.diagnosis === 'NSR' ||
+        e.diagnosis === 'Normal'
+      )) {
+        statut = 'Normal';
+      }
+
       return {
         id: e._id,
         patient: patient ? (patient.fullName || `${patient.prenom} ${patient.nom}`) : 'Inconnu',
         age: age,
         date: e.createdAt ? new Date(e.createdAt).toLocaleDateString('fr-FR') : '--',
-        statut: e.status === 'Anormal' ? 'Anormal' : (e.status === 'Normal' ? 'Normal' : 'En attente'),
+        statut: statut,
         type: 'Repos 12 pistes', // default
         urgent: e.urgent || false
       };
@@ -68,7 +78,7 @@ export const getDoctorRecentECGs = async (req: Request, res: Response) => {
 
 export const getDoctorDistributionChart = async (req: Request, res: Response) => {
   try {
-    const doctorId = (req as any).user.id;
+    const doctorId = (req as any).user._id;
 
     // 1. Trouver les ECGs de ce médecin
     const ecgs = await ECG.find({ doctor: doctorId }).select('_id');
@@ -127,7 +137,7 @@ export const getDoctorDistributionChart = async (req: Request, res: Response) =>
 
 export const getDoctorReceivedECGs = async (req: Request, res: Response) => {
   try {
-    const doctorId = (req as any).user.id;
+    const doctorId = (req as any).user._id;
     const ecgs = await ECG.find({ doctor: doctorId })
       .sort({ createdAt: -1 })
       .populate('patient', 'fullName prenom nom dateOfBirth phone gender');

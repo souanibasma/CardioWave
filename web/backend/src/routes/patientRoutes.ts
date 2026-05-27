@@ -18,6 +18,8 @@ import { protect } from "../middleware/authMiddleware"; // Adapter selon votre s
 
 const router = express.Router();
 
+import fs from "fs";
+
 // ══════════════════════════════════════════════════════════════
 // CONFIGURATION MULTER - Upload de fichiers ECG
 // ══════════════════════════════════════════════════════════════
@@ -25,7 +27,11 @@ const router = express.Router();
 const storage = multer.diskStorage({
   destination: function (_req, _file, cb) {
     // Assurez-vous que ce dossier existe ou créez-le
-    cb(null, "uploads/");
+    const dir = "uploads/ecgs/";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: function (_req, file, cb) {
     // Génère un nom unique: timestamp + extension originale

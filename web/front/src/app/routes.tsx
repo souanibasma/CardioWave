@@ -58,11 +58,7 @@ export const router = createBrowserRouter([
   },
   {
     path: '/complete-profile',
-    element: (
-      <ProtectedRoute allowedRoles={['medecin']}>
-        <CompleteProfile />
-      </ProtectedRoute>
-    ),
+    element: <CompleteProfile />,
   },
 
   // ✅ Routes Patient (protégées rôle "patient")

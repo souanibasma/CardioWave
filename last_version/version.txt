@@ -1,0 +1,3 @@
+cette version manque ui du patient lors de l'envoi de ecg et profil
+l'envoi de l'ecg ne marche pas
+le login avec gmail pour medecin est très instable 

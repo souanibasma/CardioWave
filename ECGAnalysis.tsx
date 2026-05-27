@@ -791,6 +791,154 @@ export default function ECGAnalysis() {
                 </div>
               </div>
             )}
+
+            {/* ARR — Arrhythmia detection */}
+            {isAnalyzed && analysis.aiResult?.ai_classification?.arr &&
+             Object.keys(analysis.aiResult.ai_classification.arr).length > 0 && (
+              <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <h2 style={styles.cardTitle}>
+                    <Activity style={{ width: 16, height: 16, color: '#DC2626' }} />
+                    Couche ARR — Arythmies
+                  </h2>
+                  <p style={styles.cardSub}>Détection automatique des arythmies (toujours actif)</p>
+                </div>
+                <div style={styles.cardBody}>
+                  {(() => {
+                    const arrData = analysis.aiResult.ai_classification.arr;
+                    const arrDetected: string[] = analysis.aiResult.ai_classification.arr_detected || [];
+                    return (
+                      <>
+                        {Object.entries(arrData).map(([name, d]: [string, any]) => {
+                          const prob = d?.probability ?? 0;
+                          const thr = d?.threshold ?? 0.4;
+                          const detected = d?.detected ?? false;
+                          const desc = d?.description ?? name;
+                          const pct = Math.round(prob * 100);
+                          return (
+                            <div key={name} style={{ marginBottom: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                                  {name}
+                                  <span style={{ fontWeight: 400, color: '#94A3B8', marginLeft: '6px', fontSize: '11px' }}>{desc}</span>
+                                </span>
+                                {detected ? (
+                                  <span style={{ ...styles.aiLabel, ...styles.aiLabelAnomaly }}>DÉTECTÉ</span>
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>non détecté</span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ flex: 1, height: '6px', borderRadius: '3px', background: '#E2E8F0', overflow: 'hidden' }}>
+                                  <div style={{
+                                    height: '100%',
+                                    width: `${pct}%`,
+                                    borderRadius: '3px',
+                                    background: detected ? '#DC2626' : prob >= thr * 0.8 ? '#F59E0B' : '#10B981',
+                                    transition: 'width 0.4s ease',
+                                  }} />
+                                </div>
+                                <span style={{ fontSize: '11px', color: '#64748B', minWidth: '52px', textAlign: 'right' }}>
+                                  {(prob * 100).toFixed(1)}% <span style={{ color: '#CBD5E1' }}>/ {(thr * 100).toFixed(0)}%</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {arrDetected.length > 0 && (
+                          <div style={{ marginTop: '12px', padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B' }}>
+                              ⚠️ Arythmie(s) détectée(s) : {arrDetected.join(', ')}
+                            </span>
+                          </div>
+                        )}
+                        {arrDetected.length === 0 && (
+                          <div style={{ marginTop: '12px', padding: '10px 12px', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: '#065F46' }}>
+                              ✅ Aucune arythmie détectée
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* BEAT — Ectopic beats detection */}
+            {isAnalyzed && analysis.aiResult?.ai_classification?.beat &&
+             Object.keys(analysis.aiResult.ai_classification.beat).length > 0 && (
+              <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <h2 style={styles.cardTitle}>
+                    <Heart style={{ width: 16, height: 16, color: '#7C3AED' }} />
+                    Couche BEAT — Beats ectopiques
+                  </h2>
+                  <p style={styles.cardSub}>Détection des extrasystoles (toujours actif)</p>
+                </div>
+                <div style={styles.cardBody}>
+                  {(() => {
+                    const beatData = analysis.aiResult.ai_classification.beat;
+                    const beatDetected: string[] = analysis.aiResult.ai_classification.beat_detected || [];
+                    return (
+                      <>
+                        {Object.entries(beatData).map(([name, d]: [string, any]) => {
+                          const prob = d?.probability ?? 0;
+                          const thr = d?.threshold ?? 0.4;
+                          const detected = d?.detected ?? false;
+                          const desc = d?.description ?? name;
+                          const pct = Math.round(prob * 100);
+                          return (
+                            <div key={name} style={{ marginBottom: '10px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                                  {name}
+                                  <span style={{ fontWeight: 400, color: '#94A3B8', marginLeft: '6px', fontSize: '11px' }}>{desc}</span>
+                                </span>
+                                {detected ? (
+                                  <span style={{ ...styles.aiLabel, ...styles.aiLabelAnomaly }}>DÉTECTÉ</span>
+                                ) : (
+                                  <span style={{ fontSize: '11px', color: '#94A3B8' }}>non détecté</span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ flex: 1, height: '6px', borderRadius: '3px', background: '#E2E8F0', overflow: 'hidden' }}>
+                                  <div style={{
+                                    height: '100%',
+                                    width: `${pct}%`,
+                                    borderRadius: '3px',
+                                    background: detected ? '#7C3AED' : prob >= thr * 0.8 ? '#F59E0B' : '#10B981',
+                                    transition: 'width 0.4s ease',
+                                  }} />
+                                </div>
+                                <span style={{ fontSize: '11px', color: '#64748B', minWidth: '52px', textAlign: 'right' }}>
+                                  {(prob * 100).toFixed(1)}% <span style={{ color: '#CBD5E1' }}>/ {(thr * 100).toFixed(0)}%</span>
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {beatDetected.length > 0 && (
+                          <div style={{ marginTop: '12px', padding: '10px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#991B1B' }}>
+                              ⚠️ Beat(s) ectopique(s) : {beatDetected.join(', ')}
+                            </span>
+                          </div>
+                        )}
+                        {beatDetected.length === 0 && (
+                          <div style={{ marginTop: '12px', padding: '10px 12px', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: '#065F46' }}>
+                              ✅ Aucun beat ectopique détecté
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── RIGHT column ── */}
